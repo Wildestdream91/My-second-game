@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Combat — Idle ARPG</title>
+  <link rel="stylesheet" href="css/style.css"/>
+</head>
+<body class="bg">
+<header class="topbar">
+  <h1>Idle ARPG — Combat</h1>
+  <nav>
+    <a href="index.html">Création</a>
+    <a href="game.html" class="active">Combat</a>
+    <a href="inventory.html">Inventaire</a>
+    <a href="journal.html">Journal</a>
+  </nav>
+</header>
+
+<main class="columns">
+  <section class="panel">
+    <div class="heroStats">
+      <div><b id="pName">—</b> (Lv <span id="pLvl">1</span>) — <span id="pClass"></span></div>
+      <div>HP: <span id="pHP">0</span>/<span id="pHPmax">0</span> | Mana: <span id="pMana">0</span>/<span id="pManaMax">0</span></div>
+      <div>FOR <span id="pStr">0</span> — DEX <span id="pDex">0</span> — VIT <span id="pVit">0</span> — ÉNE <span id="pEne">0</span></div>
+      <div>ATQ <span id="pAtk">0</span> — DEF <span id="pDef">0</span> — Crit <span id="pCrit">0</span>%</div>
+    </div>
+
+    <div class="zoneRow">
+      <label>Zone :
+        <select id="zoneSelect">
+          <option value="foret">Forêt Maudite (1d3, faible butin)</option>
+          <option value="crypte">Crypte Silencieuse (1d6, butin moyen)</option>
+          <option value="sanctuaire">Sanctuaire Cendré (2d6, butin élevé)</option>
+        </select>
+      </label>
+      <button id="newEncounter" class="btn">Nouvelle rencontre</button>
+      <label class="switch">
+        <input id="autoToggle" type="checkbox"/>
+        <span>Auto-combat (idle)</span>
+      </label>
+    </div>
+
+    <div class="enemyCard" id="enemyCard" hidden>
+      <div><b id="eName">—</b> (Lv <span id="eLvl">1</span>)</div>
+      <div>HP: <span id="eHP">0</span>/<span id="eHPmax">0</span></div>
+      <div>Dégâts: <span id="eDice">—</span> | DEF: <span id="eDef">—</span></div>
+      <div class="actions">
+        <button id="attackBtn" class="btn primary">⚔️ Attaquer (clic)</button>
+        <button id="fleeBtn" class="btn">🏃 Fuir</button>
+      </div>
+    </div>
+
+    <progress id="hpBar" value="0" max="1"></progress>
+    <progress id="eHpBar" value="0" max="1"></progress>
+  </section>
+
+  <aside class="panel log">
+    <h3>Journal</h3>
+    <div id="logBox" class="logBox"></div>
+  </aside>
+</main>
+
+<footer class="footnote">Idle online + offline : l’auto-combat est moins efficace, mais grind en arrière-plan.</footer>
+
+<script src="js/core.js"></script>
+<script src="js/loot.js"></script>
+<script src="js/combat.js"></script>
+<script>
+  GameCore.ensureGameOrRedirect('index.html');
+  // Bonus offline : calcule les gains depuis la dernière session
+  GameCore.applyOfflineProgress(Combat.offlineSim);
+
+  Combat.initUI();
+</script>
+</body>
+</html>
