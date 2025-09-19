@@ -1,6 +1,6 @@
 const GameCore = (()=>{
-  const SAVE_VERSION = 3;
-  const KEY="idle_arpg_save_v3";
+  const SAVE_VERSION = 4;
+  const KEY="idle_arpg_save_v4";
 
   const DEFAULT_CLASSES = {
     "Barbare":     { str: 15, dex: 10, vit: 15, ene:  5, hp: 60, mana: 20 },
@@ -19,12 +19,11 @@ const GameCore = (()=>{
     hp: 0, hpMax: 0, mana: 0, manaMax: 0,
     gold: 0,
     equipment: { weapon:null, shield:null, head:null, chest:null, ring:null, amulet:null },
-    bag: [],            // up to 40 items (indexed grid)
+    bag: [],
     zone: 'foret',
     lastSeen: Date.now(),
     lastDailyReset: 0,
-    bounties: [],
-    quests: [{title:'Abattre un chef de meute', done:false}],
+    shop: { lastReset: 0, potionsBought: 0 },
     log: []
   };
 
@@ -42,17 +41,24 @@ const GameCore = (()=>{
   function baseAttack(){
     let atk = Math.floor(state.str * 1.5) + 5;
     if(state.equipment.weapon?.affixes?.atk) atk += state.equipment.weapon.affixes.atk;
+    // set bonuses
+    const setB = window.Loot?.setBonuses() || {atk:0};
+    atk += setB.atk||0;
     return atk;
   }
   function baseDefense(){
     let def = Math.floor(state.dex * 0.8) + Math.floor(state.str*0.2);
     if(state.equipment.shield?.affixes?.def) def += state.equipment.shield.affixes.def;
     if(state.equipment.chest?.affixes?.def)  def += state.equipment.chest.affixes.def;
+    const setB = window.Loot?.setBonuses() || {def:0};
+    def += setB.def||0;
     return def;
   }
   function baseCrit(){
     let crit = 5 + Math.floor(state.dex/5);
     if(state.equipment.amulet?.affixes?.crit) crit += state.equipment.amulet.affixes.crit;
+    const setB = window.Loot?.setBonuses() || {crit:0};
+    crit += setB.crit||0;
     return clamp(crit, 0, 75);
   }
 
@@ -69,11 +75,12 @@ const GameCore = (()=>{
   }
   function migrate(){
     if(!state.version){ state.version = 1; }
-    if(state.version < 3){
+    if(state.version < 4){
       state.gold = state.gold || 0;
       state.bag = state.bag || [];
-      state.version = 3;
-      addLog('Migration de sauvegarde → v3 (inventaire grille).');
+      state.shop = state.shop || { lastReset: 0, potionsBought: 0 };
+      state.version = 4;
+      addLog('Migration → v4 (sets/uniques, boutique).');
     }
   }
   function reset(){
@@ -82,16 +89,9 @@ const GameCore = (()=>{
   }
 
   // New Game
-  function defaultBounties(){
-    return [
-      { id:'KILLS_ANY', title:'Tuer 20 monstres', type:'kills', need:20, cur:0, reward:{xp:40,gold:50} },
-      { id:'KILLS_ZONE', title:'Tuer 10 ennemis en Crypte', type:'kills_zone', zone:'crypte', need:10, cur:0, reward:{xp:60,gold:80} }
-    ];
-  }
-
   function newGame(name, cls){
     const base = DEFAULT_CLASSES[cls] || DEFAULT_CLASSES["Barbare"];
-    state.version = 3;
+    state.version = SAVE_VERSION;
     state.created = true;
     state.name = name || "Héros";
     state.cls  = cls;
@@ -104,9 +104,8 @@ const GameCore = (()=>{
     state.zone = 'foret';
     state.lastSeen = Date.now();
     state.log = [];
-    state.quests = [{title:'Abattre un chef de meute', done:false}];
-    state.bounties = defaultBounties();
     state.lastDailyReset = startOfToday();
+    state.shop = { lastReset: state.lastDailyReset, potionsBought: 0 };
     addLog(`Nouveau héros : ${state.name} (${state.cls})`);
     save();
   }
@@ -129,13 +128,13 @@ const GameCore = (()=>{
     addLog(`✨ Niveau ${state.level} atteint !`);
   }
 
-  // Daily
+  // Daily reset
   function dailyResetIfNeeded(){
     const today = startOfToday();
     if(state.lastDailyReset < today){
-      state.bounties = defaultBounties();
       state.lastDailyReset = today;
-      addLog('Nouveaux contrats quotidiens disponibles.');
+      state.shop.potionsBought = 0;
+      addLog('Nouveau jour : stock du marchand réinitialisé.');
       save();
     }
   }

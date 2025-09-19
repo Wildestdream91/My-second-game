@@ -1,17 +1,23 @@
 const Combat = (()=>{
 
   const ZONES = {
-    foret:      { name:'Forêt Maudite',     enemyDice:'1d3', xp:[8,14],  gold:[3,8],  lootRate:0.25, enemies:[
-      {name:'Sombre Loup',   hp:[14,22], atk:[1,3], def:[0,1], lvl:[1,2]},
-      {name:'Goules',        hp:[16,24], atk:[1,3], def:[0,2], lvl:[1,3]}
+    foret:      { name:'Forêt Maudite', enemyDice:'1d3', xp:[8,14],  gold:[3,8],  lootRate:0.28, enemies:[
+      {name:'Sombre Loup',    type:'beast', hp:[14,22], atk:[1,3], def:[0,1], lvl:[1,2]},
+      {name:'Corbeau Sombre', type:'beast', hp:[10,16], atk:[1,2], def:[0,1], lvl:[1,2]},
+      {name:'Dryade Corrompue',type:'fae',  hp:[18,24], atk:[1,4], def:[1,2], lvl:[2,3]},
+      {name:'Goules',         type:'undead',hp:[16,24], atk:[1,3], def:[0,2], lvl:[1,3]}
     ]},
-    crypte:     { name:'Crypte Silencieuse', enemyDice:'1d6', xp:[14,22], gold:[6,12], lootRate:0.35, enemies:[
-      {name:'Squelette',     hp:[20,30], atk:[1,6], def:[1,3], lvl:[2,4]},
-      {name:'Spectre',       hp:[22,32], atk:[1,6], def:[1,4], lvl:[3,5]}
+    crypte:     { name:'Crypte Silencieuse', enemyDice:'1d6', xp:[14,22], gold:[6,12], lootRate:0.36, enemies:[
+      {name:'Squelette',      type:'undead', hp:[20,30], atk:[1,6], def:[1,3], lvl:[2,4]},
+      {name:'Zombie Putride', type:'undead', hp:[26,36], atk:[1,4], def:[2,4], lvl:[3,5]},
+      {name:'Nécro-adepte',   type:'undead', hp:[18,26], atk:[1,5], def:[1,3], lvl:[3,5]},
+      {name:'Spectre',        type:'undead', hp:[22,32], atk:[1,6], def:[1,4], lvl:[3,5]}
     ]},
-    sanctuaire: { name:'Sanctuaire Cendré', enemyDice:'2d6', xp:[24,40], gold:[10,20], lootRate:0.45, enemies:[
-      {name:'Démon Mineur',  hp:[34,48], atk:[2,12],def:[3,6], lvl:[4,7]},
-      {name:'Chevalier Déchu',hp:[38,52],atk:[2,12],def:[4,7], lvl:[5,8]}
+    sanctuaire: { name:'Sanctuaire Cendré', enemyDice:'2d6', xp:[24,40], gold:[10,20], lootRate:0.44, enemies:[
+      {name:'Démon Mineur',    type:'demon', hp:[34,48], atk:[2,12],def:[3,6], lvl:[4,7]},
+      {name:'Démon Flétri',    type:'demon', hp:[36,50], atk:[3,10],def:[4,6], lvl:[5,8]},
+      {name:'Chevalier de Feu',type:'demon', hp:[38,52], atk:[2,12],def:[4,7], lvl:[5,8]},
+      {name:'Chevalier Déchu', type:'demon', hp:[38,52], atk:[2,12],def:[4,7], lvl:[5,8]}
     ]}
   };
 
@@ -25,6 +31,7 @@ const Combat = (()=>{
     const e = z.enemies[GameCore.R(0, z.enemies.length-1)];
     enemy = {
       name: e.name,
+      type: e.type,
       hpMax: GameCore.R(e.hp[0], e.hp[1]),
       hp: 0,
       def: GameCore.R(e.def[0], e.def[1]),
@@ -32,7 +39,7 @@ const Combat = (()=>{
       lvl: GameCore.R(e.lvl[0], e.lvl[1])
     };
     enemy.hp = enemy.hpMax;
-    GameCore.addLog(`Une ${enemy.name} surgit dans ${z.name} !`);
+    GameCore.addLog(`Une ${enemy.name} (${enemy.type}) surgit dans ${z.name} !`);
     renderEnemy();
   }
 
@@ -55,6 +62,7 @@ const Combat = (()=>{
     if(!enemy){ $('enemyCard').hidden=true; return; }
     $('enemyCard').hidden=false;
     $('eName').textContent = enemy.name; $('eLvl').textContent = enemy.lvl;
+    $('eType').textContent = enemy.type;
     $('eHP').textContent = enemy.hp; $('eHPmax').textContent = enemy.hpMax;
     $('eDef').textContent = enemy.def;
     const z = ZONES[GameCore.state.zone];
@@ -67,13 +75,22 @@ const Combat = (()=>{
     GameCore.save();
   }
 
+  function playerCritChance(){
+    let crit = Loot.totalCrit();
+    const weap = GameCore.state.equipment.weapon;
+    if(weap?.rarity==='unique' && weap.affixes?.demonCrit && enemy?.type==='demon'){
+      crit += weap.affixes.demonCrit;
+    }
+    return Math.min(75, crit);
+  }
+
   function attackOnce(){
     const s = GameCore.state;
     if(!enemy){ GameCore.addLog("Aucun ennemi. Lance une nouvelle rencontre."); renderPlayer(); return; }
 
     // Joueur frappe
     let pAtk = Loot.totalAttack();
-    if(Math.random()*100 < Loot.totalCrit()) pAtk = Math.floor(pAtk * 1.75);
+    if(Math.random()*100 < playerCritChance()) pAtk = Math.floor(pAtk * 1.75);
     pAtk += GameCore.R(0,4);
     const dmgToEnemy = Math.max(1, pAtk - enemy.def);
     enemy.hp = Math.max(0, enemy.hp - dmgToEnemy);
@@ -126,7 +143,6 @@ const Combat = (()=>{
     if(val){
       if(!enemy) pickEnemy();
       autoTimer = setInterval(()=>{
-        // sécurité : arrête si HP < 25%
         if(GameCore.state.hp < Math.floor(GameCore.state.hpMax*0.25)){
           clearInterval(autoTimer);
           GameCore.addLog('🛑 Auto-combat stoppé (HP bas).');
@@ -149,11 +165,9 @@ const Combat = (()=>{
       const e = z.enemies[0];
       let ehp = GameCore.R(e.hp[0], e.hp[1]);
       const pAtk = Math.max(1, Loot.totalAttack() - GameCore.R(0,2));
-      const rounds = Math.ceil(ehp / pAtk);
       if(Math.random() < 0.7){
         kills++;
-        const gain = GameCore.R(z.xp[0], z.xp[1]);
-        xp += gain;
+        xp += GameCore.R(z.xp[0], z.xp[1]);
         gold += GameCore.R(z.gold[0], z.gold[1]);
         if(Math.random() < z.lootRate * 0.6){
           const it = Loot.genItemForZone(zKey);
