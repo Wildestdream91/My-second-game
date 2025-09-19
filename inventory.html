@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Inventaire — Idle ARPG v4</title>
+  <title>Inventaire — Idle ARPG v5</title>
   <link rel="stylesheet" href="css/style.css"/>
 </head>
 <body class="bg">
 <header class="topbar">
-  <h1>Idle ARPG v4 — Inventaire</h1>
+  <h1>Idle ARPG v5 — Inventaire</h1>
   <nav>
     <a href="index.html">Création</a>
     <a href="game.html">Combat</a>
@@ -111,9 +111,6 @@
         };
         slot.oncontextmenu = (e)=>{
           e.preventDefault();
-          const actions = it.type==='potion'
-            ? `Utiliser / Vendre (${it.affixes.value||1} or) / Jeter`
-            : `Équiper / Vendre (${it.affixes.value||1} or) / Jeter`;
           const choice = prompt(`Action sur ${it.name} :\n[1] ${it.type==='potion'?'Utiliser':'Équiper'} / [2] Vendre / [3] Jeter`);
           if(choice==="2"){ GameCore.state.gold += (it.affixes.value||1); GameCore.state.bag.splice(i,1); }
           else if(choice==="3"){ GameCore.state.bag.splice(i,1); }

@@ -36,7 +36,6 @@
 <script src="js/loot.js"></script>
 <script>
   GameCore.ensureGameOrRedirect('index.html');
-  // init shop state
   const s = GameCore.state;
   if(!s.shop){ s.shop = { lastReset: GameCore.state.lastDailyReset || 0, potionsBought:0 }; GameCore.save(); }
   if(s.shop.lastReset !== GameCore.state.lastDailyReset){ s.shop.potionsBought = 0; s.shop.lastReset = GameCore.state.lastDailyReset; GameCore.save(); }
