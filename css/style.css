@@ -70,5 +70,8 @@ progress{width:100%;height:14px;margin:8px 0}
   z-index:1000;
   display:none;
   white-space:pre-line;
-  min-width:180px;
+  min-width:220px;
 }
+.shopGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.shopItem{background:#101423;border:1px solid var(--border);border-radius:8px;padding:12px}
+.shopItem .emoji{font-size:28px}
