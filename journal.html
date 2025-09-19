@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Journal — Idle ARPG</title>
+  <link rel="stylesheet" href="css/style.css"/>
+</head>
+<body class="bg">
+<header class="topbar">
+  <h1>Idle ARPG — Journal</h1>
+  <nav>
+    <a href="index.html">Création</a>
+    <a href="game.html">Combat</a>
+    <a href="inventory.html">Inventaire</a>
+    <a href="journal.html" class="active">Journal</a>
+  </nav>
+</header>
+
+<main class="panel">
+  <h3>Historique</h3>
+  <div id="logBox" class="logBox"></div>
+
+  <h3>Quêtes</h3>
+  <ul id="quests" class="bullets"></ul>
+</main>
+
+<script src="js/core.js"></script>
+<script>
+  GameCore.ensureGameOrRedirect('index.html');
+  document.getElementById('logBox').innerHTML = GameCore.logsHTML();
+
+  const q = document.getElementById('quests');
+  const quests = GameCore.state.quests;
+  q.innerHTML = '';
+  quests.forEach(t => {
+    const li = document.createElement('li');
+    li.textContent = `${t.title} — ${t.done ? '✔️' : '…'}`;
+    q.appendChild(li);
+  });
+</script>
+</body>
+</html>
