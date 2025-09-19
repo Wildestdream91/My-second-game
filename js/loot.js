@@ -1,106 +1,98 @@
 const Loot = (()=>{
   const MAX_CAPACITY = 40;
 
-  // Affixes catalog (simple)
+  // Affixes pool (multi-affixes)
   const AFFIX_POOL = {
-    atk:   { label:"+ATQ",   slots:['weapon','ring','amulet'] },
-    def:   { label:"+DEF",   slots:['shield','head','chest','ring'] },
-    crit:  { label:"+Crit%", slots:['amulet','ring'] },
-    hp:    { label:"+HP",    slots:['head','chest','ring'] },
-    mf:    { label:"+MF%",   slots:['amulet','ring','head'] }
+    weapon: ['atk','crit','mf'],
+    shield: ['def','mf'],
+    head:   ['def','mf','crit'],
+    chest:  ['def','mf'],
+    ring:   ['crit','mf','atk'],
+    amulet: ['crit','mf']
   };
 
-  // Base ranges per slot
-  const BASE_RANGES = {
-    weapon:{ atk:[2,12] },
-    shield:{ def:[2,8] },
-    head:{ def:[1,6], hp:[4,12] },
-    chest:{ def:[3,10], hp:[6,16] },
-    ring:{ atk:[0,4], def:[0,3], crit:[1,4], hp:[2,8], mf:[2,6] },
-    amulet:{ atk:[0,2], crit:[2,8], mf:[4,10] }
+  const AFFIX_RANGES = {
+    atk:  { common:[1,5],  rare:[3,9],  unique:[7,12] },
+    def:  { common:[1,4],  rare:[3,7],  unique:[6,12] },
+    crit: { common:[1,3],  rare:[3,7],  unique:[6,12] },
+    mf:   { common:[5,10], rare:[10,20],unique:[15,35] } // Magic Find %
   };
 
-  // Sets (simple)
+  // Sets examples
   const SETS = {
-    wolf: { name:"Set du Loup", pieces:['weapon','head'], threshold2:{ atk:2, crit:3 } },
-    ash:  { name:"Set des Cendres", pieces:['weapon','amulet'], threshold2:{ atk:4, mf:5 } }
+    wolf: {
+      name:"Héritage du Loup",
+      pieces:['weapon','head'],
+      bonuses: {2:{atk:3, crit:3}, 3:{def:3}} // only 2p achievable here
+    },
+    ash : {
+      name:"Cendre Éternelle",
+      pieces:['weapon','amulet','ring'],
+      bonuses: {2:{atk:4}, 3:{crit:4}}
+    }
   };
 
-  // Rarity weights per act (affects number of affixes & rolls)
-  const RARITY = {
-    common: { label:'Commun', affixCount:[1,1], mult:1.0, value:[4,10] },
-    rare:   { label:'Rare',   affixCount:[2,3], mult:1.2, value:[12,22] },
-    unique: { label:'Unique', affixCount:[2,3], mult:1.5, value:[25,45] },
+  const UNIQUES = {
+    weapon: [{ name:"Lame Cendrée", affixes:{ atk:10, crit:6, mf:10 }, note:"+ dégât constant" }],
+    amulet: [{ name:"Œil de Minuit", affixes:{ crit:10, mf:20 }, note:"+ chance de critique" }],
+    ring  : [{ name:"Sceau Antique", affixes:{ crit:8, mf:12 }, note:"chance de butin rare" }],
+    head  : [{ name:"Heaume du Vagabond", affixes:{ def:8, mf:15 }, note:"confort de farm" }],
   };
 
-  const ACT_RARITY_WEIGHTS = {
-    act1: { common: 88, rare: 11, unique: 1 },
-    act2: { common: 85, rare: 13, unique: 2 },
-    act3: { common: 82, rare: 15, unique: 3 },
-    act4: { common: 78, rare: 18, unique: 4 },
-    act5: { common: 75, rare: 20, unique: 5 },
+  // Rarity weights per act (more rares later)
+  const RARITY_WEIGHTS = {
+    act1:{ common:88, rare:10, unique:2 },
+    act2:{ common:85, rare:12, unique:3 },
+    act3:{ common:82, rare:14, unique:4 },
+    act4:{ common:78, rare:17, unique:5 },
+    act5:{ common:75, rare:18, unique:7 },
   };
 
-  const SLOTS = ['weapon','shield','head','chest','ring','amulet'];
+  function totalMF(){
+    const eq = GameCore.state.equipment;
+    let mf=0;
+    for(const k in eq){
+      const a=eq[k]?.affixes;
+      if(a?.mf) mf += a.mf;
+    }
+    return Math.min(200, mf); // cap
+  }
 
-  function rollRarity(act){
-    const w = ACT_RARITY_WEIGHTS[act] || ACT_RARITY_WEIGHTS.act1;
-    const mf = GameCore.totalMF() || 0;
-    // MF converts some common→rare and rare→unique probability (simple model)
-    const bonusRare   = Math.min(12, mf*0.08);
-    const bonusUnique = Math.min(5, mf*0.03);
-    const weights = {
-      unique: Math.min(100, w.unique + bonusUnique),
-      rare:   Math.max(0, w.rare + bonusRare),
-      common: 100 // computed by leftover
-    };
-    const total = weights.unique + weights.rare + (w.common - (bonusRare + bonusUnique));
-    const r = Math.random()*total;
-    if(r < weights.unique) return 'unique';
-    if(r < weights.unique + weights.rare) return 'rare';
+  function rollRarity(zoneKey){
+    const act = GameCore.actOfZone(zoneKey);
+    const w = RARITY_WEIGHTS[act] || RARITY_WEIGHTS.act1;
+    const mf = totalMF();
+    // MF increases chance of rare/unique by shifting weights
+    const uniqueBoost = Math.min(0.5, mf*0.0015); // up to +50%
+    const rareBoost   = Math.min(0.5, mf*0.0010);
+    const unique = w.unique*(1+uniqueBoost);
+    const rare   = w.rare*(1+rareBoost);
+    const common = Math.max(0, 100 - (unique+rare));
+    const r = Math.random()*100;
+    if(r < unique) return 'unique';
+    if(r < unique + rare) return 'rare';
     return 'common';
   }
 
-  function affixRoll(slot, key, mult){
-    const base = BASE_RANGES[slot]||{};
-    const range = base[key];
-    if(!range) return 0;
-    const v = GameCore.R(range[0], range[1]);
-    return Math.max(0, Math.floor(v*mult));
-  }
+  const SLOTS = ['weapon','shield','head','chest','ring','amulet'];
 
-  function randomAffixKeysFor(slot){
-    // pick possible affixes for slot
-    const all = Object.keys(AFFIX_POOL).filter(k=> (AFFIX_POOL[k].slots||[]).includes(slot) || (BASE_RANGES[slot]&&BASE_RANGES[slot][k]));
-    return all;
-  }
+  function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+  function range([a,b]){ return GameCore.R(a,b); }
 
-  function genItem(act){
-    const slot = SLOTS[GameCore.R(0,SLOTS.length-1)];
-    const rarity = rollRarity(act);
-    const rcfg = RARITY[rarity];
-    const name = `${rcfg.label} ${baseNameFor(slot)}`;
-
-    const affixes = { value: GameCore.R(rcfg.value[0], rcfg.value[1]) };
-    const count = GameCore.R(rcfg.affixCount[0], rcfg.affixCount[1]);
-    const keys = randomAffixKeysFor(slot);
-    for(let i=0;i<count && keys.length;i++){
-      const pickIndex = GameCore.R(0, keys.length-1);
-      const k = keys.splice(pickIndex,1)[0];
-      affixes[k] = (affixes[k]||0) + affixRoll(slot, k, rcfg.mult);
+  function genAffixes(slot, rarity){
+    const pool = AFFIX_POOL[slot];
+    const count = rarity==='unique' ? GameCore.R(2,3) : (rarity==='rare' ? GameCore.R(2,3) : GameCore.R(1,2));
+    const chosen = [];
+    while(chosen.length < count){
+      const a = pick(pool);
+      if(!chosen.includes(a)) chosen.push(a);
     }
-
-    // unique/set flavor
-    let setKey=null;
-    if(rarity==='unique' && Math.random()<0.5){
-      // 50% uniques appartiennent à un set si slot match
-      for(const k in SETS){
-        if(SETS[k].pieces.includes(slot)){ setKey=k; break; }
-      }
-      if(setKey) affixes.mf = (affixes.mf||0) + 3; // petit bonus MF sur uniques de set
+    const aff = { value: GameCore.R(8,18) * (rarity==='unique'?3:(rarity==='rare'?2:1)) };
+    for(const key of chosen){
+      const [min,max] = AFFIX_RANGES[key][rarity];
+      aff[key] = range([min,max]);
     }
-
-    return { name, slot, rarity, affixes, setKey };
+    return aff;
   }
 
   function baseNameFor(slot){
@@ -115,9 +107,30 @@ const Loot = (()=>{
     return baseNames[slot][GameCore.R(0, baseNames[slot].length-1)];
   }
 
-  function makePotion(){
-    return { name:'Potion de soin', type:'potion', slot:'consumable', rarity:'common', affixes:{ healPct:35, value:2 } };
+  function genItemForZone(zoneKey){
+    const slot = SLOTS[GameCore.R(0,SLOTS.length-1)];
+    const rarity = rollRarity(zoneKey);
+
+    // Try unique
+    if(rarity==='unique' && UNIQUES[slot] && Math.random()<0.75){
+      const u = UNIQUES[slot][GameCore.R(0,UNIQUES[slot].length-1)];
+      return { name:u.name, slot, rarity:'unique', affixes:{...u.affixes, value: GameCore.R(30,45)}, note:u.note };
+    }
+
+    // Small chance for set piece on rare
+    let setKey=null, setInfo=null;
+    if(rarity!=='common' && Math.random()<0.18){
+      for(const k in SETS){ const st = SETS[k]; if(st.pieces.includes(slot)){ setKey=k; setInfo=st; break; } }
+    }
+
+    const name = `${rarity==='common'?'Commun':rarity==='rare'?'Rare':'Unique'} ${baseNameFor(slot)}` + (setInfo?` (${setInfo.name})`:'');
+    const affixes = genAffixes(slot, rarity);
+    const it = { name, slot, rarity, affixes };
+    if(setKey){ it.setKey=setKey; it.setName=setInfo.name; }
+    return it;
   }
+
+  function makePotion(){ return { name:'Potion de soin', type:'potion', slot:'consumable', rarity:'common', affixes:{ healPct:35, value:2 } }; }
 
   function addToBag(item){
     const s = GameCore.state;
@@ -136,7 +149,7 @@ const Loot = (()=>{
     const it = s.bag[idx];
     if(!it) return;
     if(it.type==='potion'){
-      const heal = Math.floor(s.hpMax * ((it.affixes.healPct||35)/100));
+      const heal = Math.floor(s.hpMax * (it.affixes.healPct||35)/100);
       s.hp = Math.min(s.hpMax, s.hp + heal);
       s.bag.splice(idx,1);
       GameCore.addLog(`🧪 Potion utilisée: +${heal} HP.`);
@@ -163,7 +176,7 @@ const Loot = (()=>{
     GameCore.addLog(`Retiré: ${it.name}`);
     if(dropInstead){ GameCore.addLog(`Jeté: ${it.name}`); return null; }
     if(returnItem){ return it; }
-    if(s.bag.length < MAX_CAPACITY){ s.bag.push(it); }
+    if(s.bag.length < 40){ s.bag.push(it); }
     else { GameCore.addLog(`⚠️ Sac plein, ${it.name} tombe au sol.`); }
     GameCore.save();
     return null;
@@ -191,39 +204,78 @@ Consommable
 Soin: ${it.affixes.healPct||35}% HP
 Valeur: ${it.affixes.value||2} or`;
     }
-    const lines = [`${it.name}`, `Rareté: ${it.rarity}`];
-    const a = it.affixes || {};
-    if(a.atk) lines.push(`ATQ +${a.atk}`);
-    if(a.def) lines.push(`DEF +${a.def}`);
-    if(a.crit) lines.push(`Crit +${a.crit}%`);
-    if(a.hp) lines.push(`HP +${a.hp}`);
-    if(a.mf) lines.push(`MF +${a.mf}%`);
-    lines.push(`Valeur: ${a.value||1} or`);
+    let t = `${it.name}
+Rareté: ${it.rarity}`;
+    const a = it.affixes||{};
+    if(a.atk)  t += `\nATQ +${a.atk}`;
+    if(a.def)  t += `\nDEF +${a.def}`;
+    if(a.crit) t += `\nCrit +${a.crit}%`;
+    if(a.mf)   t += `\nMF +${a.mf}%`;
+    t += `\nValeur: ${a.value||1} or`;
     if(it.setKey){
-      lines.push(`Set: ${it.setKey==='wolf'?'Set du Loup':'Set des Cendres'}`);
-      lines.push(`Bonus (2): ${it.setKey==='wolf'?'+2 ATQ, +3% Crit':'+4 ATQ, +5% MF'}`);
+      const st = SETS[it.setKey];
+      if(st){
+        const count = equippedCount(it.setKey);
+        t += `\n\nSet: ${st.name} (${count}/${st.pieces.length})`;
+        const steps = Object.keys(st.bonuses).map(n=>parseInt(n)).sort((a,b)=>a-b);
+        for(const n of steps){
+          const b = st.bonuses[n];
+          const active = count>=n ? '✓' : '✗';
+          t += `\n(${n}) ${active} ` + bonusToText(b);
+        }
+      }
     }
-    return lines.join('\n');
+    if(it.rarity==='unique' && it.note){ t += `\nUnique: ${it.note}`; }
+    return t;
   }
 
-  // Totals (used on sheet)
-  function activeSetText(){
-    const s = GameCore.state;
+  function bonusToText(b){
+    const arr=[];
+    if(b.atk) arr.push(`+${b.atk} ATQ`);
+    if(b.def) arr.push(`+${b.def} DEF`);
+    if(b.crit) arr.push(`+${b.crit}% Crit`);
+    if(b.mf) arr.push(`+${b.mf}% MF`);
+    return arr.join(' ');
+  }
+
+  function equippedCount(setKey){
+    const eq = GameCore.state.equipment;
+    let c=0;
+    for(const s in eq){ if(eq[s]?.setKey===setKey) c++; }
+    return c;
+  }
+
+  function setBonuses(){
+    const eq = GameCore.state.equipment;
     const counts = {};
-    for(const slot in s.equipment){
-      const it = s.equipment[slot];
-      if(it?.setKey){ counts[it.setKey]=(counts[it.setKey]||0)+1; }
+    for(const s in eq){
+      const it = eq[s];
+      if(it?.setKey) counts[it.setKey]=(counts[it.setKey]||0)+1;
     }
-    const names = {wolf:"Set du Loup", ash:"Set des Cendres"};
-    const actives = Object.keys(counts).filter(k=>counts[k]>=2).map(k=>`${names[k]} (2/2)`);
-    return actives.length? `Bonus set actif: ${actives.join(', ')}` : '';
+    const bonus = {atk:0,def:0,crit:0,mf:0};
+    for(const key in counts){
+      const st = SETS[key]; const c=counts[key];
+      if(!st) continue;
+      const steps = Object.keys(st.bonuses).map(n=>parseInt(n)).sort((a,b)=>a-b);
+      for(const n of steps){ if(c>=n){ const b = st.bonuses[n]; bonus.atk+=(b.atk||0); bonus.def+=(b.def||0); bonus.crit+=(b.crit||0); bonus.mf+=(b.mf||0);} }
+    }
+    return bonus;
   }
-  function totalAttack(){ return GameCore.baseAttack(); }
-  function totalDefense(){ return GameCore.baseDefense(); }
-  function totalCrit(){ return GameCore.baseCrit(); }
-  function totalMF(){ return GameCore.totalMF(); }
 
-  return { genItem: genItem, addToBag, toggleEquip, useConsumable, unequip,
-           sellCommons, tooltipText, activeSetText, totalAttack, totalDefense, totalCrit, totalMF,
-           makePotion };
+  function activeSetText(){
+    const eq = GameCore.state.equipment;
+    const counts = {};
+    for(const s in eq){ const it=eq[s]; if(it?.setKey) counts[it.setKey]=(counts[it.setKey]||0)+1; }
+    const names = {wolf:"Héritage du Loup", ash:"Cendre Éternelle"};
+    const actives = Object.keys(counts).filter(k=>counts[k]>=2).map(k=>`${names[k]||k} (${counts[k]} pièces)`);
+    return actives.length? `Bonus de set actif: ${actives.join(', ')}` : '';
+  }
+
+  function totalAttack(){ return GameCore.baseAttack() + setBonuses().atk; }
+  function totalDefense(){ return GameCore.baseDefense() + setBonuses().def; }
+  function totalCrit(){ return GameCore.baseCrit() + setBonuses().crit; }
+  function totalMF(){ return (function(){ let x=0; const eq=GameCore.state.equipment; for(const k in eq){ x+=(eq[k]?.affixes?.mf||0); } x+=setBonuses().mf||0; return x; })(); }
+
+  return { genItemForZone, addToBag, toggleEquip, sellCommons, totalAttack, totalDefense, totalCrit, totalMF,
+           tooltipText, setBonuses, activeSetText, makePotion, useConsumable, unequip };
 })();

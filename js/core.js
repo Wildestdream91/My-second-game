@@ -21,7 +21,6 @@ const GameCore = (()=>{
     equipment: { weapon:null, shield:null, head:null, chest:null, ring:null, amulet:null },
     bag: [],
     zone: 'act1_foret',
-    act: 'act1',
     lastSeen: Date.now(),
     lastDailyReset: 0,
     shop: { lastReset: 0, potionsBought: 0 },
@@ -36,76 +35,64 @@ const GameCore = (()=>{
     if (state.log.length>900) state.log.shift();
     save();
   };
-  const startOfToday = ()=> { const d=new Date(); d.setHours(0,0,0,0); return d.getTime(); };
 
-  // Derived (base + items + sets)
-  function setBonuses(){
-    const counts = {};
-    const eq = state.equipment;
-    for(const slot in eq){
-      const it = eq[slot]; if(!it?.setKey) continue;
-      counts[it.setKey] = (counts[it.setKey]||0)+1;
-    }
-    const bonus = { atk:0, def:0, crit:0, hpPct:0, mf:0 };
-    // Define simple sets
-    const SETS = {
-      wolf:{ name:"Set du Loup",  thresholds:{2:{atk:2,crit:3},3:{hpPct:5}} },
-      ash :{ name:"Set des Cendres", thresholds:{2:{atk:4,mf:5},3:{def:3}} }
+  // Acts unlock
+  const ACT_REQ = { act1:1, act2:15, act3:27, act4:35, act5:40 };
+  function actOfZone(z){
+    if(z.startsWith('act1_')) return 'act1';
+    if(z.startsWith('act2_')) return 'act2';
+    if(z.startsWith('act3_')) return 'act3';
+    if(z.startsWith('act4_')) return 'act4';
+    if(z.startsWith('act5_')) return 'act5';
+    return 'act1';
+  }
+  function actsAccess(level){
+    return {
+      act1: level >= ACT_REQ.act1,
+      act2: level >= ACT_REQ.act2,
+      act3: level >= ACT_REQ.act3,
+      act4: level >= ACT_REQ.act4,
+      act5: level >= ACT_REQ.act5,
     };
-    for(const key in counts){
-      const pieces = counts[key], cfg = SETS[key];
-      if(!cfg) continue;
-      for(const thr in cfg.thresholds){
-        if(pieces >= parseInt(thr)){
-          const b = cfg.thresholds[thr];
-          for(const k in b){ bonus[k]=(bonus[k]||0)+b[k]; }
-        }
-      }
-    }
-    return bonus;
   }
 
-  function fromEquipment(){
-    const eq = state.equipment;
-    const sum = { atk:0, def:0, crit:0, mf:0, flatHp:0 };
-    for(const slot in eq){
-      const it = eq[slot]; if(!it) continue;
-      const a = it.affixes||{};
-      sum.atk += a.atk||0;
-      sum.def += a.def||0;
-      sum.crit += a.crit||0;
-      sum.mf += a.mf||0;
-      sum.flatHp += a.hp||0;
-    }
-    const setB = setBonuses();
-    sum.atk += setB.atk||0;
-    sum.def += setB.def||0;
-    sum.crit += setB.crit||0;
-    sum.mf += setB.mf||0;
-    sum.hpPct = setB.hpPct||0;
-    return sum;
-  }
-
+  // Derived
   function baseAttack(){
     let atk = Math.floor(state.str * 1.5) + 5;
-    const eq = fromEquipment(); atk += eq.atk;
+    const weap = state.equipment.weapon;
+    if(weap?.affixes?.atk) atk += weap.affixes.atk;
+    const setB = window.Loot?.setBonuses() || {atk:0};
+    atk += setB.atk||0;
     return atk;
   }
   function baseDefense(){
     let def = Math.floor(state.dex * 0.8) + Math.floor(state.str*0.2);
-    const eq = fromEquipment(); def += eq.def;
+    const sh = state.equipment.shield, ch = state.equipment.chest, hd = state.equipment.head;
+    if(sh?.affixes?.def) def += sh.affixes.def;
+    if(ch?.affixes?.def) def += ch.affixes.def;
+    if(hd?.affixes?.def) def += hd.affixes.def;
+    const setB = window.Loot?.setBonuses() || {def:0};
+    def += setB.def||0;
     return def;
   }
   function baseCrit(){
     let crit = 5 + Math.floor(state.dex/5);
-    const eq = fromEquipment(); crit += eq.crit;
+    const amu = state.equipment.amulet, ring = state.equipment.ring;
+    if(amu?.affixes?.crit) crit += amu.affixes.crit;
+    if(ring?.affixes?.crit) crit += ring.affixes.crit;
+    const setB = window.Loot?.setBonuses() || {crit:0};
+    crit += setB.crit||0;
     return clamp(crit, 0, 75);
-  }
-  function totalMF(){
-    return clamp(fromEquipment().mf, 0, 300);
   }
 
   // Save / Load
+  function ensureGameOrRedirect(url){
+    load();
+    if(!state.created){
+      location.href = url;
+      return;
+    }
+  }
   function save(){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){} }
   function load(){
     try{
@@ -113,11 +100,8 @@ const GameCore = (()=>{
       if(!raw) return;
       const data = JSON.parse(raw);
       Object.assign(state, data);
-      migrate();
     }catch(e){}
   }
-  function migrate(){ if(!state.version){ state.version = SAVE_VERSION; } }
-
   function reset(){
     localStorage.removeItem(KEY);
     location.href='index.html';
@@ -126,17 +110,20 @@ const GameCore = (()=>{
   // New Game
   function newGame(name, cls){
     const base = DEFAULT_CLASSES[cls] || DEFAULT_CLASSES["Barbare"];
-    Object.assign(state, {
-      version: SAVE_VERSION, created: true,
-      name: name || "Héros", cls,
-      level: 1, xp: 0, xpToNext: 100,
-      str: base.str, dex: base.dex, vit: base.vit, ene: base.ene,
-      hpMax: base.hp + base.vit*2, hp: 0, manaMax: base.mana + base.ene*2, mana: 0,
-      gold: 0, equipment:{weapon:null,shield:null,head:null,chest:null,ring:null,amulet:null},
-      bag:[], zone:'act1_foret', act:'act1', lastSeen: Date.now(), log:[],
-      lastDailyReset: startOfToday(), shop:{ lastReset: startOfToday(), potionsBought:0 }
-    });
-    state.hp = state.hpMax; state.mana = state.manaMax;
+    state.version = SAVE_VERSION;
+    state.created = true;
+    state.name = name || "Héros";
+    state.cls  = cls;
+    state.level = 1; state.xp = 0; state.xpToNext = 100;
+    state.str = base.str; state.dex = base.dex; state.vit = base.vit; state.ene = base.ene;
+    state.hpMax = base.hp + state.vit*2; state.hp = state.hpMax;
+    state.manaMax = base.mana + state.ene*2; state.mana = state.manaMax;
+    state.gold = 0;
+    state.bag = []; state.equipment = {weapon:null,shield:null,head:null,chest:null,ring:null,amulet:null};
+    state.zone = 'act1_foret';
+    state.lastSeen = Date.now();
+    state.log = [];
+    state.shop = { lastReset: 0, potionsBought: 0 };
     addLog(`Nouveau héros : ${state.name} (${state.cls})`);
     save();
   }
@@ -151,41 +138,36 @@ const GameCore = (()=>{
     save();
   }
   function levelUp(){
+    const before = state.level;
     state.level++;
     state.xpToNext = Math.floor(state.xpToNext * 1.25 + 20);
     state.str += 1; state.dex += 1; state.vit += 2; state.ene += 1;
-    const eq = fromEquipment();
-    state.hpMax += 6 + state.vit + (eq.flatHp||0);
-    state.hpMax = Math.floor(state.hpMax * (1 + (eq.hpPct||0)/100));
-    state.hp = state.hpMax;
+    state.hpMax += 6 + state.vit; state.hp = state.hpMax;
     state.manaMax += 4 + state.ene; state.mana = state.manaMax;
     addLog(`✨ Niveau ${state.level} atteint !`);
-    checkActUnlock();
+
+    // Unlock messages
+    const acc = actsAccess(state.level);
+    const prev = actsAccess(before);
+    if(!prev.act2 && acc.act2) addLog('🔓 Acte II débloqué (niv 15) — Désert de Lut Gholein.');
+    if(!prev.act3 && acc.act3) addLog('🔓 Acte III débloqué (niv 27) — Jungle de Kurast.');
+    if(!prev.act4 && acc.act4) addLog('🔓 Acte IV débloqué (niv 35) — Enfers.');
+    if(!prev.act5 && acc.act5) addLog('🔓 Acte V débloqué (niv 40) — Mont Arreat.');
   }
 
-  function checkActUnlock(){
-    const lvl = state.level;
-    const unlocks = [
-      {act:'act2', lvl:15, name:'Acte II — Désert de Lut Gholein'},
-      {act:'act3', lvl:27, name:'Acte III — Jungle de Kurast'},
-      {act:'act4', lvl:35, name:'Acte IV — Enfer'},
-      {act:'act5', lvl:40, name:'Acte V — Mont Arreat'},
-    ];
-    for(const u of unlocks){
-      if(lvl === u.lvl){
-        addLog(`✨ Déblocage : ${u.name} !`);
-      }
-    }
-  }
-
-  // Offline progress (stubbed simple)
+  // Offline progress (light)
   function applyOfflineProgress(simFn){
-    const now = Date.now(); let delta = Math.floor((now - state.lastSeen)/1000); state.lastSeen = now;
+    load();
+    const now = Date.now();
+    let delta = Math.floor((now - state.lastSeen)/1000);
+    state.lastSeen = now;
     if(delta < 10) { save(); return; }
-    delta = Math.min(delta, 3*3600);
-    const encounters = Math.floor(delta/30);
-    const res = simFn(encounters);
-    addLog(`Idle hors-ligne : ${res.kills} kills, +${res.xp} XP, +${res.gold} or, ${res.items} objets.`);
+    delta = Math.min(delta, 2*3600);
+    const encounters = Math.floor((delta/40) * 0.4 * 3);
+    if(encounters>0 && typeof simFn === 'function'){
+      const res = simFn(encounters);
+      addLog(`Idle hors-ligne : ${res.kills} kills, +${res.xp} XP, +${res.gold} or, ${res.items} objets.`);
+    }
     save();
   }
 
@@ -203,7 +185,7 @@ const GameCore = (()=>{
     const text = await file.text();
     const data = JSON.parse(text);
     Object.assign(state, data);
-    migrate(); save();
+    save();
     addLog('Sauvegarde importée.');
   }
 
@@ -211,12 +193,13 @@ const GameCore = (()=>{
 
   return {
     state, save, load, reset,
-    newGame, ensureGameOrRedirect: (url)=>{ load(); if(!state.created){ location.href = url; return; } },
+    newGame, ensureGameOrRedirect,
     gainXP, levelUp,
-    baseAttack, baseDefense, baseCrit, totalMF, setBonuses, fromEquipment,
+    baseAttack, baseDefense, baseCrit,
     addLog, logsHTML,
     applyOfflineProgress,
     exportSave, importSave,
-    R, clamp
+    R, clamp,
+    actsAccess, ACT_REQ, actOfZone
   };
 })();
