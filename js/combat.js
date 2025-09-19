@@ -48,21 +48,28 @@ const Combat = (()=>{
     $('pName').textContent = s.name;
     $('pClass').textContent = s.cls;
     $('pLvl').textContent = s.level;
-    $('pHP').textContent = s.hp; $('pHPmax').textContent = s.hpMax;
-    $('pMana').textContent = s.mana; $('pManaMax').textContent = s.manaMax;
     $('pStr').textContent = s.str; $('pDex').textContent = s.dex; $('pVit').textContent = s.vit; $('pEne').textContent = s.ene;
     $('pAtk').textContent = Loot.totalAttack();
     $('pDef').textContent = Loot.totalDefense();
     $('pCrit').textContent = Loot.totalCrit();
     $('pGold').textContent = s.gold;
-    $('hpBar').max = s.hpMax; $('hpBar').value = s.hp;
+
+    const hpPct = Math.max(0, Math.min(1, s.hp / s.hpMax));
+    const manaPct = Math.max(0, Math.min(1, s.mana / s.manaMax));
+    const xpPct = Math.max(0, Math.min(1, s.xp / s.xpToNext));
+    $('barHpFill').style.width = (hpPct*100)+'%';
+    $('barManaFill').style.width = (manaPct*100)+'%';
+    $('barXpFill').style.width = (xpPct*100)+'%';
+    $('barHpText').textContent = `HP ${s.hp}/${s.hpMax}`;
+    $('barManaText').textContent = `Mana ${s.mana}/${s.manaMax}`;
+    $('barXpText').textContent = `XP ${s.xp}/${s.xpToNext}`;
+
     document.getElementById('logBox').innerHTML = GameCore.logsHTML();
   }
   function renderEnemy(){
     if(!enemy){ $('enemyCard').hidden=true; return; }
     $('enemyCard').hidden=false;
-    $('eName').textContent = enemy.name; $('eLvl').textContent = enemy.lvl;
-    $('eType').textContent = enemy.type;
+    $('eName').textContent = enemy.name; $('eLvl').textContent = enemy.lvl; $('eType').textContent = enemy.type;
     $('eHP').textContent = enemy.hp; $('eHPmax').textContent = enemy.hpMax;
     $('eDef').textContent = enemy.def;
     const z = ZONES[GameCore.state.zone];
@@ -88,7 +95,6 @@ const Combat = (()=>{
     const s = GameCore.state;
     if(!enemy){ GameCore.addLog("Aucun ennemi. Lance une nouvelle rencontre."); renderPlayer(); return; }
 
-    // Joueur frappe
     let pAtk = Loot.totalAttack();
     if(Math.random()*100 < playerCritChance()) pAtk = Math.floor(pAtk * 1.75);
     pAtk += GameCore.R(0,4);
@@ -100,7 +106,6 @@ const Combat = (()=>{
       return;
     }
 
-    // Ennemi riposte
     const eDmg = GameCore.R(enemy.atk[0], enemy.atk[1]);
     const dmgToPlayer = Math.max(0, eDmg - Loot.totalDefense());
     s.hp = Math.max(0, s.hp - dmgToPlayer);
@@ -164,7 +169,6 @@ const Combat = (()=>{
       const z = ZONES[zKey];
       const e = z.enemies[0];
       let ehp = GameCore.R(e.hp[0], e.hp[1]);
-      const pAtk = Math.max(1, Loot.totalAttack() - GameCore.R(0,2));
       if(Math.random() < 0.7){
         kills++;
         xp += GameCore.R(z.xp[0], z.xp[1]);
@@ -188,8 +192,6 @@ const Combat = (()=>{
     $('attackBtn').addEventListener('click', attackOnce);
     $('fleeBtn').addEventListener('click', ()=>{ GameCore.addLog('Tu prends la fuite.'); enemy=null; renderEnemy(); });
     $('autoToggle').addEventListener('change', e=> setAuto(e.target.checked));
-
-    $('hpBar').max = GameCore.state.hpMax; $('hpBar').value = GameCore.state.hp;
     if(!enemy) pickEnemy();
   }
 

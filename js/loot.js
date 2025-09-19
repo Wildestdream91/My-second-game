@@ -1,7 +1,6 @@
 const Loot = (()=>{
   const MAX_CAPACITY = 40;
 
-  // ----- Sets & uniques -----
   const SETS = {
     wolf: { name:"Set du Loup", pieces:["weapon","head"], bonus2:{ atk:2, crit:3 } },
     ash : { name:"Set des Cendres", pieces:["weapon","amulet"], bonus2:{ atk:4 } }
@@ -43,13 +42,11 @@ const Loot = (()=>{
     const rarity = pickRarity();
     const slot = SLOTS[GameCore.R(0,SLOTS.length-1)];
 
-    // unique named
     if(rarity.key==='unique' && UNIQUES[slot] && Math.random()<0.8){
       const cand = UNIQUES[slot][GameCore.R(0, UNIQUES[slot].length-1)];
       return { name:cand.name, slot, rarity:'unique', affixes:{...cand.affixes, value: GameCore.R(24,40)}, note:cand.note };
     }
 
-    // set candidate (rare only) ~15% chance if slot compatible
     let setKey=null, setInfo=null;
     if(rarity.key==='rare' && Math.random()<0.15){
       for(const k in SETS){
@@ -128,7 +125,6 @@ const Loot = (()=>{
     return {count, gold};
   }
 
-  // ---- Comparison & tooltips ----
   function compareWithEquipped(it){
     const s = GameCore.state;
     const eq = s.equipment[it.slot];
@@ -156,10 +152,12 @@ ATQ ${it.affixes.atk||0}  DEF ${it.affixes.def||0}
 Crit ${it.affixes.crit||0}%
 Valeur: ${it.affixes.value||1} or`;
     if(it.setKey){
-      const st = SETS[it.setKey];
-      t += `
+      const st = { wolf:{name:"Set du Loup", bonus2:{atk:2,crit:3}}, ash:{name:"Set des Cendres", bonus2:{atk:4}} }[it.setKey];
+      if(st){
+        t += `
 Set: ${st.name}
 Bonus (2): ${st.bonus2.atk?`+${st.bonus2.atk} ATQ `:''}${st.bonus2.crit?`+${st.bonus2.crit}% Crit`:''}`;
+      }
     }
     if(it.rarity==='unique' && it.note){ t += `
 Unique: ${it.note}`; }
@@ -178,12 +176,8 @@ Unique: ${it.note}`; }
     const bonus = {atk:0,def:0,crit:0};
     for(const key in counts){
       const c = counts[key];
-      const st = SETS[key];
-      if(c>=2 && st.bonus2){
-        bonus.atk += st.bonus2.atk||0;
-        bonus.def += st.bonus2.def||0;
-        bonus.crit+= st.bonus2.crit||0;
-      }
+      if(key==='wolf' && c>=2){ bonus.atk+=2; bonus.crit+=3; }
+      if(key==='ash'  && c>=2){ bonus.atk+=4; }
     }
     return bonus;
   }
@@ -191,10 +185,10 @@ Unique: ${it.note}`; }
   function activeSetText(){
     const s = GameCore.state;
     const counts = {};
-    const names = {};
+    const names = {wolf:"Set du Loup", ash:"Set des Cendres"};
     for(const slot in s.equipment){
       const it = s.equipment[slot];
-      if(it?.setKey){ counts[it.setKey]=(counts[it.setKey]||0)+1; names[it.setKey]=it.setName; }
+      if(it?.setKey){ counts[it.setKey]=(counts[it.setKey]||0)+1; }
     }
     const actives = Object.keys(counts).filter(k=>counts[k]>=2).map(k=>`${names[k]} (2/2)`);
     return actives.length? `Bonus de set actif: ${actives.join(', ')}` : '';

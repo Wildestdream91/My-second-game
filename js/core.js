@@ -1,6 +1,6 @@
 const GameCore = (()=>{
-  const SAVE_VERSION = 4;
-  const KEY="idle_arpg_save_v4";
+  const SAVE_VERSION = 5;
+  const KEY="idle_arpg_save_v5";
 
   const DEFAULT_CLASSES = {
     "Barbare":     { str: 15, dex: 10, vit: 15, ene:  5, hp: 60, mana: 20 },
@@ -41,7 +41,6 @@ const GameCore = (()=>{
   function baseAttack(){
     let atk = Math.floor(state.str * 1.5) + 5;
     if(state.equipment.weapon?.affixes?.atk) atk += state.equipment.weapon.affixes.atk;
-    // set bonuses
     const setB = window.Loot?.setBonuses() || {atk:0};
     atk += setB.atk||0;
     return atk;
@@ -75,12 +74,12 @@ const GameCore = (()=>{
   }
   function migrate(){
     if(!state.version){ state.version = 1; }
-    if(state.version < 4){
+    if(state.version < 5){
       state.gold = state.gold || 0;
       state.bag = state.bag || [];
       state.shop = state.shop || { lastReset: 0, potionsBought: 0 };
-      state.version = 4;
-      addLog('Migration → v4 (sets/uniques, boutique).');
+      state.version = 5;
+      addLog('Migration → v5 (barres HP/Mana/XP).');
     }
   }
   function reset(){
