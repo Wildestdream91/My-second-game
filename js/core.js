@@ -1,4 +1,6 @@
 const GameCore = (()=>{
+  const SAVE_VERSION = 3;
+  const KEY="idle_arpg_save_v3";
 
   const DEFAULT_CLASSES = {
     "Barbare":     { str: 15, dex: 10, vit: 15, ene:  5, hp: 60, mana: 20 },
@@ -9,32 +11,36 @@ const GameCore = (()=>{
   };
 
   const state = {
+    version: SAVE_VERSION,
     created: false,
     name: "", cls: "",
     level: 1, xp: 0, xpToNext: 100,
     str: 0, dex: 0, vit: 0, ene: 0,
     hp: 0, hpMax: 0, mana: 0, manaMax: 0,
+    gold: 0,
     equipment: { weapon:null, shield:null, head:null, chest:null, ring:null, amulet:null },
-    bag: [],
+    bag: [],            // up to 40 items (indexed grid)
     zone: 'foret',
     lastSeen: Date.now(),
+    lastDailyReset: 0,
+    bounties: [],
     quests: [{title:'Abattre un chef de meute', done:false}],
     log: []
   };
 
-  // ---------- Utils ----------
-  const R = (min,max)=> Math.floor(Math.random()*(max-min+1))+min; // jet de dés
+  // Utils
+  const R = (min,max)=> Math.floor(Math.random()*(max-min+1))+min;
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
   const addLog = (msg)=>{
     state.log.push(`${new Date().toLocaleTimeString()} — ${msg}`);
-    if (state.log.length>300) state.log.shift();
+    if (state.log.length>800) state.log.shift();
     save();
   };
+  const startOfToday = ()=> { const d=new Date(); d.setHours(0,0,0,0); return d.getTime(); };
 
-  // ---------- Derived ----------
+  // Derived
   function baseAttack(){
     let atk = Math.floor(state.str * 1.5) + 5;
-    // bonus arme
     if(state.equipment.weapon?.affixes?.atk) atk += state.equipment.weapon.affixes.atk;
     return atk;
   }
@@ -50,8 +56,7 @@ const GameCore = (()=>{
     return clamp(crit, 0, 75);
   }
 
-  // ---------- Save / Load ----------
-  const KEY="idle_arpg_save_v1";
+  // Save / Load / Migrate
   function save(){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){} }
   function load(){
     try{
@@ -59,16 +64,34 @@ const GameCore = (()=>{
       if(!raw) return;
       const data = JSON.parse(raw);
       Object.assign(state, data);
+      migrate();
     }catch(e){}
+  }
+  function migrate(){
+    if(!state.version){ state.version = 1; }
+    if(state.version < 3){
+      state.gold = state.gold || 0;
+      state.bag = state.bag || [];
+      state.version = 3;
+      addLog('Migration de sauvegarde → v3 (inventaire grille).');
+    }
   }
   function reset(){
     localStorage.removeItem(KEY);
     location.href='index.html';
   }
 
-  // ---------- New Game ----------
+  // New Game
+  function defaultBounties(){
+    return [
+      { id:'KILLS_ANY', title:'Tuer 20 monstres', type:'kills', need:20, cur:0, reward:{xp:40,gold:50} },
+      { id:'KILLS_ZONE', title:'Tuer 10 ennemis en Crypte', type:'kills_zone', zone:'crypte', need:10, cur:0, reward:{xp:60,gold:80} }
+    ];
+  }
+
   function newGame(name, cls){
     const base = DEFAULT_CLASSES[cls] || DEFAULT_CLASSES["Barbare"];
+    state.version = 3;
     state.created = true;
     state.name = name || "Héros";
     state.cls  = cls;
@@ -76,16 +99,19 @@ const GameCore = (()=>{
     state.str = base.str; state.dex = base.dex; state.vit = base.vit; state.ene = base.ene;
     state.hpMax = base.hp + state.vit*2; state.hp = state.hpMax;
     state.manaMax = base.mana + state.ene*2; state.mana = state.manaMax;
+    state.gold = 0;
     state.bag = []; state.equipment = {weapon:null,shield:null,head:null,chest:null,ring:null,amulet:null};
     state.zone = 'foret';
     state.lastSeen = Date.now();
     state.log = [];
     state.quests = [{title:'Abattre un chef de meute', done:false}];
+    state.bounties = defaultBounties();
+    state.lastDailyReset = startOfToday();
     addLog(`Nouveau héros : ${state.name} (${state.cls})`);
     save();
   }
 
-  // ---------- Level Up ----------
+  // XP / Level
   function gainXP(n){
     state.xp += n;
     while(state.xp >= state.xpToNext){
@@ -96,42 +122,65 @@ const GameCore = (()=>{
   }
   function levelUp(){
     state.level++;
-    // progression simple mais sensible
     state.xpToNext = Math.floor(state.xpToNext * 1.25 + 20);
-    // +stats auto (esprit D2 sans distribution manuelle pour le proto)
     state.str += 1; state.dex += 1; state.vit += 2; state.ene += 1;
     state.hpMax += 6 + state.vit; state.hp = state.hpMax;
     state.manaMax += 4 + state.ene; state.mana = state.manaMax;
     addLog(`✨ Niveau ${state.level} atteint !`);
   }
 
-  // ---------- Offline Idle ----------
-  // Simule quelques rencontres auto à efficacité réduite
-  function applyOfflineProgress(simFn){
-    const now = Date.now();
-    const deltaSec = Math.floor((now - state.lastSeen)/1000);
-    state.lastSeen = now;
-    if(deltaSec < 10) { save(); return; }
+  // Daily
+  function dailyResetIfNeeded(){
+    const today = startOfToday();
+    if(state.lastDailyReset < today){
+      state.bounties = defaultBounties();
+      state.lastDailyReset = today;
+      addLog('Nouveaux contrats quotidiens disponibles.');
+      save();
+    }
+  }
+  function ensureGameOrRedirect(url){
+    load();
+    if(!state.created){ location.href = url; return; }
+    dailyResetIfNeeded();
+  }
 
-    // 25% d’efficacité : environ 1 rencontre/40s
-    const encounters = Math.floor((deltaSec/40) * 0.25 * 4);
+  // Offline progress
+  function applyOfflineProgress(simFn){
+    load();
+    const now = Date.now();
+    let delta = Math.floor((now - state.lastSeen)/1000);
+    state.lastSeen = now;
+    if(delta < 10) { save(); return; }
+    delta = Math.min(delta, 4*3600);
+    const encounters = Math.floor((delta/40) * 0.35 * 4);
     if(encounters>0){
-      const res = simFn(encounters); // Combat.offlineSim renverra xp/loot
-      addLog(`Idle hors-ligne : ${res.kills} kills, +${res.xp} XP, ${res.items} objets.`);
+      const res = simFn(encounters);
+      addLog(`Idle hors-ligne : ${res.kills} kills, +${res.xp} XP, +${res.gold} or, ${res.items} objets.`);
     }
     save();
   }
 
-  // ---------- Guards / UI helpers ----------
-  function ensureGameOrRedirect(url){
-    load();
-    if(!state.created){ location.href = url; }
+  // Export / Import
+  function exportSave(){
+    const blob = new Blob([JSON.stringify(state,null,2)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'idle-arpg-save.json';
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+    addLog('Sauvegarde exportée.');
   }
-  function logsHTML(){
-    return state.log.map(l=>l).join('\n');
+  async function importSave(file){
+    const text = await file.text();
+    const data = JSON.parse(text);
+    Object.assign(state, data);
+    migrate(); save();
+    addLog('Sauvegarde importée.');
   }
 
-  // ---------- Expose ----------
+  function logsHTML(){ return state.log.join('\n'); }
+
   return {
     state, save, load, reset,
     newGame, ensureGameOrRedirect,
@@ -139,6 +188,7 @@ const GameCore = (()=>{
     baseAttack, baseDefense, baseCrit,
     addLog, logsHTML,
     applyOfflineProgress,
+    exportSave, importSave,
     R, clamp
   };
 })();
