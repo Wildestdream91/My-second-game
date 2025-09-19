@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Inventaire — Idle ARPG</title>
+  <link rel="stylesheet" href="css/style.css"/>
+</head>
+<body class="bg">
+<header class="topbar">
+  <h1>Idle ARPG — Inventaire</h1>
+  <nav>
+    <a href="index.html">Création</a>
+    <a href="game.html">Combat</a>
+    <a href="inventory.html" class="active">Inventaire</a>
+    <a href="journal.html">Journal</a>
+  </nav>
+</header>
+
+<main class="columns">
+  <section class="panel">
+    <h3>Équipement</h3>
+    <div class="equipGrid">
+      <div>Arme: <span id="slotWeapon">—</span></div>
+      <div>Bouclier: <span id="slotShield">—</span></div>
+      <div>Tête: <span id="slotHead">—</span></div>
+      <div>Torso: <span id="slotChest">—</span></div>
+      <div>Anneau: <span id="slotRing">—</span></div>
+      <div>Amulette: <span id="slotAmulet">—</span></div>
+    </div>
+
+    <h3>Stats</h3>
+    <div id="charStats"></div>
+  </section>
+
+  <section class="panel">
+    <h3>Sac (loot)</h3>
+    <div id="bag" class="bag"></div>
+  </section>
+
+  <aside class="panel log">
+    <h3>Journal</h3>
+    <div id="logBox" class="logBox"></div>
+  </aside>
+</main>
+
+<footer class="footnote">Clique un objet pour équiper / déséquiper.</footer>
+
+<script src="js/core.js"></script>
+<script src="js/loot.js"></script>
+<script>
+  GameCore.ensureGameOrRedirect('index.html');
+
+  function render() {
+    const s = GameCore.state;
+    const eq = s.equipment;
+    const byId = id=>document.getElementById(id);
+
+    byId('slotWeapon').textContent = eq.weapon?.name || '—';
+    byId('slotShield').textContent = eq.shield?.name || '—';
+    byId('slotHead').textContent   = eq.head?.name   || '—';
+    byId('slotChest').textContent  = eq.chest?.name  || '—';
+    byId('slotRing').textContent   = eq.ring?.name   || '—';
+    byId('slotAmulet').textContent = eq.amulet?.name || '—';
+
+    byId('charStats').innerHTML = `
+      <div><b>${s.name}</b> (${s.cls}) — Lv ${s.level}</div>
+      <div>HP ${s.hp}/${s.hpMax} — Mana ${s.mana}/${s.manaMax}</div>
+      <div>FOR ${s.str} — DEX ${s.dex} — VIT ${s.vit} — ÉNE ${s.ene}</div>
+      <div>ATQ ${Loot.totalAttack()} — DEF ${Loot.totalDefense()} — Crit ${Loot.totalCrit()}%</div>
+    `;
+
+    const bag = byId('bag');
+    bag.innerHTML = '';
+    s.bag.forEach((it, idx)=>{
+      const btn = document.createElement('button');
+      btn.className = `item ${it.rarity.toLowerCase()}`;
+      btn.title = JSON.stringify(it.affixes);
+      btn.textContent = `${it.name}`;
+      btn.onclick = ()=> {
+        Loot.toggleEquip(idx);
+        GameCore.log(`Équipé: ${it.name}`);
+        GameCore.save();
+        render();
+      };
+      bag.appendChild(btn);
+    });
+
+    // log
+    document.getElementById('logBox').innerHTML = GameCore.logsHTML();
+  }
+
+  render();
+</script>
+</body>
+</html>
