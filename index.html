@@ -1,79 +1,65 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Idle RPG Prototype</title>
-  <link rel="stylesheet" href="style.css"/>
+  <title>Création du personnage — Idle ARPG</title>
+  <link rel="stylesheet" href="css/style.css"/>
 </head>
-<body>
-  <header>
-    <h1>Idle RPG Prototype</h1>
-    <p>XP, HP, loot aléatoire et inventaire</p>
-  </header>
+<body class="bg">
+<header class="topbar">
+  <h1>Idle ARPG — Création du personnage</h1>
+  <nav>
+    <a href="index.html" class="active">Création</a>
+    <a href="game.html">Combat</a>
+    <a href="inventory.html">Inventaire</a>
+    <a href="journal.html">Journal</a>
+  </nav>
+</header>
 
-  <main>
-    <section class="panel">
-      <h2>Personnage</h2>
-      <div>Nom : <span id="charName"></span></div>
-      <div>Classe : <span id="charClass"></span></div>
-      <div>HP : <span id="hp"></span> / <span id="maxHp"></span></div>
-      <div>Niveau : <span id="level">1</span></div>
-      <div>XP : <span id="xp">0</span> / <span id="xpToNext">0</span></div>
-      <div>XP/s : <span id="xpps">0</span></div>
-      <progress id="xpBar" value="0" max="1"></progress>
-    </section>
+<main class="panel">
+  <h2>Nouvelle partie</h2>
+  <form id="createForm" class="grid">
+    <label>Pseudo
+      <input id="heroName" type="text" placeholder="Votre pseudo" required maxlength="20"/>
+    </label>
 
-    <section class="panel">
-      <h2>Stats & Compétences</h2>
-      <div>Points de stats : <span id="statPoints">0</span></div>
-      <div>Points de comp. : <span id="skillPoints">0</span></div>
-      <div class="row">
-        <div class="col">
-          <h3>Stats</h3>
-          <div>Force: <span id="strVal">0</span> <button id="addStr">+1</button></div>
-          <div>Dextérité: <span id="dexVal">0</span> <button id="addDex">+1</button></div>
-          <div>Volonté: <span id="wilVal">0</span> <button id="addWil">+1</button></div>
-        </div>
-        <div class="col">
-          <h3>Compétences</h3>
-          <div>Arcanes: <span id="skArcane">0</span> <button id="addArcane">+1</button></div>
-          <div>Aura: <span id="skAura">0</span> <button id="addAura">+1</button></div>
-        </div>
-      </div>
-    </section>
-
-    <section class="panel">
-      <h2>Zones</h2>
-      <label for="zone">Zone de farm</label>
-      <select id="zone">
-        <option value="meadow">Clairière Paisible (1d3 dégâts, 2 XP/s)</option>
-        <option value="crypt">Crypte Silencieuse (1d6 dégâts, 5 XP/s)</option>
-        <option value="sanctum">Sanctuaire Cendré (2d6 dégâts, 10 XP/s)</option>
+    <label>Classe
+      <select id="heroClass">
+        <option value="Barbare">Barbare</option>
+        <option value="Paladin">Paladin</option>
+        <option value="Sorcière">Sorcière</option>
+        <option value="Nécromancien">Nécromancien</option>
+        <option value="Amazone">Amazone</option>
       </select>
-      <div class="row">
-        <button id="start">▶ Start</button>
-        <button id="stop">⏸ Stop</button>
-        <button id="reset">♻ Reset</button>
-      </div>
-    </section>
+    </label>
 
-    <section class="panel">
-      <h2>Inventaire</h2>
-      <div id="inventory"></div>
-      <p id="equipped">Aucun objet équipé</p>
-    </section>
+    <button type="submit" class="btn primary">Commencer l’aventure</button>
+  </form>
 
-    <section class="panel">
-      <h2>Journal</h2>
-      <div id="log" class="log"></div>
-    </section>
-  </main>
+  <section class="panel subtle">
+    <h3>Caractéristiques (style Diablo II)</h3>
+    <ul class="bullets">
+      <li><b>Force</b> : dégâts physiques + prérequis équipements</li>
+      <li><b>Dextérité</b> : précision, esquive/bloque, armes à distance</li>
+      <li><b>Vitalité</b> : points de vie</li>
+      <li><b>Énergie</b> : mana / ressources magiques</li>
+    </ul>
+  </section>
+</main>
 
-  <footer>
-    <p>© 2025 Idle RPG Prototype — univers original</p>
-  </footer>
+<footer class="footnote">© 2025 — Univers original, inspiré du genre ARPG.</footer>
 
-  <script src="script.js"></script>
+<script src="js/core.js"></script>
+<script>
+  // peupler les stats preview dynamiquement si tu veux (optionnel)
+  document.getElementById('createForm').addEventListener('submit', (e)=>{
+    e.preventDefault();
+    const name = document.getElementById('heroName').value.trim();
+    const cls  = document.getElementById('heroClass').value;
+    GameCore.newGame(name, cls); // init + save
+    location.href = 'game.html';
+  });
+</script>
 </body>
 </html>
