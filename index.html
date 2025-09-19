@@ -3,54 +3,39 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Création du personnage — Idle ARPG v5</title>
+  <title>Idle ARPG v5.3 — Création</title>
   <link rel="stylesheet" href="css/style.css"/>
 </head>
 <body class="bg">
 <header class="topbar">
-  <h1>Idle ARPG v5 — Création du personnage</h1>
+  <h1>Idle ARPG v5.3 — Création du personnage</h1>
   <nav>
-    <a href="index.html" class="active">Création</a>
+    <a class="active" href="index.html">Création</a>
     <a href="game.html">Combat</a>
     <a href="inventory.html">Inventaire</a>
     <a href="shop.html">Campement</a>
     <a href="journal.html">Journal</a>
   </nav>
 </header>
-
 <main class="panel">
   <h2>Nouvelle partie</h2>
   <form id="createForm" class="grid">
     <label>Pseudo
       <input id="heroName" type="text" placeholder="Votre pseudo" required maxlength="20"/>
     </label>
-
     <label>Classe
       <select id="heroClass">
-        <option value="Barbare">Barbare</option>
-        <option value="Paladin">Paladin</option>
-        <option value="Sorcière">Sorcière</option>
-        <option value="Nécromancien">Nécromancien</option>
-        <option value="Amazone">Amazone</option>
+        <option>Barbare</option>
+        <option>Paladin</option>
+        <option>Sorcière</option>
+        <option>Nécromancien</option>
+        <option>Amazone</option>
       </select>
     </label>
-
-    <button type="submit" class="btn primary">Commencer l’aventure</button>
+    <button class="btn primary" type="submit">Commencer l’aventure</button>
   </form>
-
-  <section class="panel subtle">
-    <h3>Caractéristiques (style Diablo II)</h3>
-    <ul class="bullets">
-      <li><b>Force</b> : dégâts physiques + prérequis équipements</li>
-      <li><b>Dextérité</b> : précision, esquive/bloque, armes à distance</li>
-      <li><b>Vitalité</b> : points de vie</li>
-      <li><b>Énergie</b> : mana / ressources magiques</li>
-    </ul>
-  </section>
+  <p class="muted">v5.3 : Actes I–V, déblocage par niveau, inventaire contextuel, loot multi-affixes + sets.</p>
 </main>
-
-<footer class="footnote">© 2025 — Univers original, inspiré du genre ARPG.</footer>
-
 <script src="js/core.js"></script>
 <script>
   document.getElementById('createForm').addEventListener('submit', (e)=>{

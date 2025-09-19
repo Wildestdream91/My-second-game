@@ -3,15 +3,15 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Combat — Idle ARPG v5</title>
+  <title>Idle ARPG v5.3 — Combat</title>
   <link rel="stylesheet" href="css/style.css"/>
 </head>
 <body class="bg">
 <header class="topbar">
-  <h1>Idle ARPG v5 — Combat</h1>
+  <h1>Idle ARPG v5.3 — Combat</h1>
   <nav>
     <a href="index.html">Création</a>
-    <a href="game.html" class="active">Combat</a>
+    <a class="active" href="game.html">Combat</a>
     <a href="inventory.html">Inventaire</a>
     <a href="shop.html">Campement</a>
     <a href="journal.html">Journal</a>
@@ -25,34 +25,23 @@
         <div>
           <div><b id="pName">—</b> (Lv <span id="pLvl">1</span>) — <span id="pClass"></span></div>
           <div>FOR <span id="pStr">0</span> — DEX <span id="pDex">0</span> — VIT <span id="pVit">0</span> — ÉNE <span id="pEne">0</span></div>
-          <div>ATQ <span id="pAtk">0</span> — DEF <span id="pDef">0</span> — Crit <span id="pCrit">0</span>% | Or: <span id="pGold">0</span></div>
+          <div>ATQ <span id="pAtk">0</span> — DEF <span id="pDef">0</span> — Crit <span id="pCrit">0</span>% | MF <span id="pMF">0</span>% | Or <span id="pGold">0</span></div>
         </div>
       </div>
 
-      <!-- Bars à la Diablo -->
       <div class="bars">
-        <div class="bar hp">
-          <div class="bar-fill" id="barHpFill"></div>
-          <div class="bar-text" id="barHpText">HP 0/0</div>
-        </div>
-        <div class="bar mana">
-          <div class="bar-fill" id="barManaFill"></div>
-          <div class="bar-text" id="barManaText">Mana 0/0</div>
-        </div>
-        <div class="bar xp">
-          <div class="bar-fill" id="barXpFill"></div>
-          <div class="bar-text" id="barXpText">XP 0/0</div>
-        </div>
+        <div class="bar hp"><div class="bar-fill" id="barHpFill"></div><div class="bar-text" id="barHpText">HP 0/0</div></div>
+        <div class="bar mana"><div class="bar-fill" id="barManaFill"></div><div class="bar-text" id="barManaText">Mana 0/0</div></div>
+        <div class="bar xp"><div class="bar-fill" id="barXpFill"></div><div class="bar-text" id="barXpText">XP 0/0</div></div>
       </div>
     </div>
 
     <div class="zoneRow">
+      <label>Acte :
+        <select id="actSelect"></select>
+      </label>
       <label>Zone :
-        <select id="zoneSelect">
-          <option value="foret">Forêt Maudite</option>
-          <option value="crypte">Crypte Silencieuse</option>
-          <option value="sanctuaire">Sanctuaire Cendré</option>
-        </select>
+        <select id="zoneSelect"></select>
       </label>
       <button id="newEncounter" class="btn">Nouvelle rencontre</button>
       <label class="switch">
@@ -79,7 +68,7 @@
   </aside>
 </main>
 
-<footer class="footnote">Barres HP/Mana/XP façon Diablo. L’auto-combat s’arrête si HP &lt; 25%.</footer>
+<footer class="footnote">Actes I–V avec déblocage par niveau (I:1, II:15, III:27, IV:35, V:40). Loot multi-affixes, sets, MF.</footer>
 
 <script src="js/core.js"></script>
 <script src="js/loot.js"></script>
