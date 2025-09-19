@@ -6,6 +6,6 @@ main{max-width:800px;margin:20px auto;padding:0 16px}
 .kv{display:flex;justify-content:space-between;margin:6px 0}
 .v{font-weight:600}
 progress{width:100%;height:16px}
-button{background:#2c6df8;color:#fff;border:none;border-radius:6px;padding:6px 12px;cursor:pointer}
+button{background:#2c6df8;color:#fff;border:none;border-radius:6px;padding:6px 12px;cursor:pointer;margin:2px}
 button:hover{opacity:0.9}
 .log{background:#0f1115;border:1px solid #333;padding:10px;height:150px;overflow:auto;font-size:12px;white-space:pre-wrap}
