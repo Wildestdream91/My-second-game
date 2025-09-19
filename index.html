@@ -3,55 +3,53 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Idle Ladder Prototype</title>
+  <title>Idle RPG Prototype</title>
   <link rel="stylesheet" href="style.css"/>
 </head>
 <body>
   <header>
-    <h1>Idle Ladder Prototype</h1>
-    <p>Prototype minimal : leveling 1→99 avec runs automatiques.</p>
+    <h1>Idle RPG Prototype</h1>
+    <p>XP, HP, loot aléatoire et inventaire</p>
   </header>
 
   <main>
     <section class="panel">
-      <div class="row">
-        <div>
-          <div class="kv"><span class="k">Niveau</span><span class="v" id="level">1</span></div>
-          <div class="kv"><span class="k">XP</span><span class="v"><span id="xp">0</span> / <span id="xpToNext">0</span></span></div>
-          <div class="kv"><span class="k">XP/s</span><span class="v" id="xpps">0</span></div>
-        </div>
-        <div>
-          <div class="kv"><span class="k">Points de stats</span><span class="v" id="statPoints">0</span></div>
-          <div class="kv"><span class="k">Points de comp.</span><span class="v" id="skillPoints">0</span></div>
-        </div>
-      </div>
+      <h2>Personnage</h2>
+      <div>Nom : <span id="charName"></span></div>
+      <div>Classe : <span id="charClass"></span></div>
+      <div>HP : <span id="hp"></span> / <span id="maxHp"></span></div>
+      <div>Niveau : <span id="level">1</span></div>
+      <div>XP : <span id="xp">0</span> / <span id="xpToNext">0</span></div>
+      <div>XP/s : <span id="xpps">0</span></div>
       <progress id="xpBar" value="0" max="1"></progress>
     </section>
 
     <section class="panel">
-      <h2>Build</h2>
+      <h2>Stats & Compétences</h2>
+      <div>Points de stats : <span id="statPoints">0</span></div>
+      <div>Points de comp. : <span id="skillPoints">0</span></div>
       <div class="row">
         <div class="col">
           <h3>Stats</h3>
-          <div class="stat">Force: <span id="strVal">0</span> <button id="addStr">+1</button></div>
-          <div class="stat">Dextérité: <span id="dexVal">0</span> <button id="addDex">+1</button></div>
-          <div class="stat">Volonté: <span id="wilVal">0</span> <button id="addWil">+1</button></div>
+          <div>Force: <span id="strVal">0</span> <button id="addStr">+1</button></div>
+          <div>Dextérité: <span id="dexVal">0</span> <button id="addDex">+1</button></div>
+          <div>Volonté: <span id="wilVal">0</span> <button id="addWil">+1</button></div>
         </div>
         <div class="col">
           <h3>Compétences</h3>
-          <div class="stat">Maîtrise des Arcanes: <span id="skArcane">0</span> <button id="addArcane">+1</button></div>
-          <div class="stat">Aura du Compagnon: <span id="skAura">0</span> <button id="addAura">+1</button></div>
+          <div>Arcanes: <span id="skArcane">0</span> <button id="addArcane">+1</button></div>
+          <div>Aura: <span id="skAura">0</span> <button id="addAura">+1</button></div>
         </div>
       </div>
     </section>
 
     <section class="panel">
-      <h2>Runs</h2>
+      <h2>Zones</h2>
       <label for="zone">Zone de farm</label>
       <select id="zone">
-        <option value="meadow">Clairière Paisible — base 2 XP/s</option>
-        <option value="crypt">Crypte Silencieuse — base 5 XP/s</option>
-        <option value="sanctum">Sanctuaire Cendré — base 10 XP/s</option>
+        <option value="meadow">Clairière Paisible (1d3 dégâts, 2 XP/s)</option>
+        <option value="crypt">Crypte Silencieuse (1d6 dégâts, 5 XP/s)</option>
+        <option value="sanctum">Sanctuaire Cendré (2d6 dégâts, 10 XP/s)</option>
       </select>
       <div class="row">
         <button id="start">▶ Start</button>
@@ -61,13 +59,19 @@
     </section>
 
     <section class="panel">
+      <h2>Inventaire</h2>
+      <div id="inventory"></div>
+      <p id="equipped">Aucun objet équipé</p>
+    </section>
+
+    <section class="panel">
       <h2>Journal</h2>
       <div id="log" class="log"></div>
     </section>
   </main>
 
   <footer>
-    <p>© 2025 Idle Ladder Prototype — univers original.</p>
+    <p>© 2025 Idle RPG Prototype — univers original</p>
   </footer>
 
   <script src="script.js"></script>
