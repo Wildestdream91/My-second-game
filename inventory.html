@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Inventaire — Idle ARPG</title>
+  <title>Inventaire — Idle ARPG v3</title>
   <link rel="stylesheet" href="css/style.css"/>
 </head>
 <body class="bg">
 <header class="topbar">
-  <h1>Idle ARPG — Inventaire</h1>
+  <h1>Idle ARPG v3 — Inventaire</h1>
   <nav>
     <a href="index.html">Création</a>
     <a href="game.html">Combat</a>
@@ -34,8 +34,15 @@
   </section>
 
   <section class="panel">
-    <h3>Sac (loot)</h3>
-    <div id="bag" class="bag"></div>
+    <h3>Sac (40 places)</h3>
+    <div id="inventoryGrid" class="invGrid"></div>
+    <div class="row" style="margin-top:8px;">
+      <button id="sellTrash" class="btn">Vendre tout sauf rares/uniques/équipés</button>
+      <button id="exportBtn" class="btn">Exporter sauvegarde</button>
+      <label class="btn">Importer sauvegarde
+        <input id="importFile" type="file" accept="application/json" style="display:none">
+      </label>
+    </div>
   </section>
 
   <aside class="panel log">
@@ -44,53 +51,84 @@
   </aside>
 </main>
 
-<footer class="footnote">Clique un objet pour équiper / déséquiper.</footer>
+<footer class="footnote">Clic gauche: équiper. Clic droit: équiper / vendre / jeter.</footer>
 
 <script src="js/core.js"></script>
 <script src="js/loot.js"></script>
 <script>
   GameCore.ensureGameOrRedirect('index.html');
 
-  function render() {
+  function renderSheet() {
     const s = GameCore.state;
     const eq = s.equipment;
     const byId = id=>document.getElementById(id);
-
     byId('slotWeapon').textContent = eq.weapon?.name || '—';
     byId('slotShield').textContent = eq.shield?.name || '—';
     byId('slotHead').textContent   = eq.head?.name   || '—';
     byId('slotChest').textContent  = eq.chest?.name  || '—';
     byId('slotRing').textContent   = eq.ring?.name   || '—';
     byId('slotAmulet').textContent = eq.amulet?.name || '—';
-
     byId('charStats').innerHTML = `
       <div><b>${s.name}</b> (${s.cls}) — Lv ${s.level}</div>
-      <div>HP ${s.hp}/${s.hpMax} — Mana ${s.mana}/${s.manaMax}</div>
+      <div>HP ${s.hp}/${s.hpMax} — Mana ${s.mana}/${s.manaMax} — Or ${s.gold}</div>
       <div>FOR ${s.str} — DEX ${s.dex} — VIT ${s.vit} — ÉNE ${s.ene}</div>
       <div>ATQ ${Loot.totalAttack()} — DEF ${Loot.totalDefense()} — Crit ${Loot.totalCrit()}%</div>
     `;
+  }
 
-    const bag = byId('bag');
-    bag.innerHTML = '';
-    s.bag.forEach((it, idx)=>{
-      const btn = document.createElement('button');
-      btn.className = `item ${it.rarity.toLowerCase()}`;
-      btn.title = JSON.stringify(it.affixes);
-      btn.textContent = `${it.name}`;
-      btn.onclick = ()=> {
-        Loot.toggleEquip(idx);
-        GameCore.log(`Équipé: ${it.name}`);
-        GameCore.save();
-        render();
-      };
-      bag.appendChild(btn);
-    });
+  function renderInventory() {
+    const grid = document.getElementById("inventoryGrid");
+    grid.innerHTML = "";
+    const s = GameCore.state;
 
-    // log
+    for (let i=0; i<40; i++) {
+      const slot = document.createElement("div");
+      slot.className = "slot";
+      const it = s.bag[i];
+      if (it) {
+        slot.classList.add(it.rarity);
+        slot.textContent = (it.slot==='weapon') ? '🗡️' :
+                           (it.slot==='shield') ? '🛡️' :
+                           (it.slot==='head') ? '🪖' :
+                           (it.slot==='chest') ? '🥋' :
+                           (it.slot==='ring') ? '💍' : '🧿';
+
+        const tip = document.createElement("div");
+        tip.className = "tooltip";
+        tip.innerText = `${it.name}
+Rareté: ${it.rarity}
+ATQ ${it.affixes.atk||0}  DEF ${it.affixes.def||0}
+Crit ${it.affixes.crit||0}%
+Valeur: ${it.affixes.value||1} or`;
+        slot.appendChild(tip);
+        slot.onmouseenter = ()=>{ tip.style.display="block"; };
+        slot.onmouseleave = ()=>{ tip.style.display="none"; };
+
+        slot.onclick = ()=>{ Loot.toggleEquip(i); GameCore.save(); renderSheet(); renderInventory(); };
+        slot.oncontextmenu = (e)=>{
+          e.preventDefault();
+          const choice = prompt(`Action sur ${it.name} :\n[1] Équiper / [2] Vendre (${it.affixes.value||1} or) / [3] Jeter`);
+          if(choice==="2"){ GameCore.state.gold += (it.affixes.value||1); GameCore.state.bag.splice(i,1); }
+          else if(choice==="3"){ GameCore.state.bag.splice(i,1); }
+          else { Loot.toggleEquip(i); }
+          GameCore.save(); renderSheet(); renderInventory();
+        };
+      }
+      grid.appendChild(slot);
+    }
     document.getElementById('logBox').innerHTML = GameCore.logsHTML();
   }
 
-  render();
+  document.getElementById('sellTrash').onclick = ()=>{
+    const res = Loot.sellCommons();
+    GameCore.addLog(`Vente rapide : ${res.count} communs → ${res.gold} or`);
+    GameCore.save(); renderSheet(); renderInventory();
+  };
+  document.getElementById('exportBtn').onclick = ()=> GameCore.exportSave();
+  document.getElementById('importFile').addEventListener('change', (e)=> GameCore.importSave(e.target.files[0]).then(()=>{renderSheet(); renderInventory();}));
+
+  renderSheet();
+  renderInventory();
 </script>
 </body>
 </html>

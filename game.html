@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Combat — Idle ARPG</title>
+  <title>Combat — Idle ARPG v3</title>
   <link rel="stylesheet" href="css/style.css"/>
 </head>
 <body class="bg">
 <header class="topbar">
-  <h1>Idle ARPG — Combat</h1>
+  <h1>Idle ARPG v3 — Combat</h1>
   <nav>
     <a href="index.html">Création</a>
     <a href="game.html" class="active">Combat</a>
@@ -23,7 +23,7 @@
       <div><b id="pName">—</b> (Lv <span id="pLvl">1</span>) — <span id="pClass"></span></div>
       <div>HP: <span id="pHP">0</span>/<span id="pHPmax">0</span> | Mana: <span id="pMana">0</span>/<span id="pManaMax">0</span></div>
       <div>FOR <span id="pStr">0</span> — DEX <span id="pDex">0</span> — VIT <span id="pVit">0</span> — ÉNE <span id="pEne">0</span></div>
-      <div>ATQ <span id="pAtk">0</span> — DEF <span id="pDef">0</span> — Crit <span id="pCrit">0</span>%</div>
+      <div>ATQ <span id="pAtk">0</span> — DEF <span id="pDef">0</span> — Crit <span id="pCrit">0</span>% | Or: <span id="pGold">0</span></div>
     </div>
 
     <div class="zoneRow">
@@ -37,7 +37,7 @@
       <button id="newEncounter" class="btn">Nouvelle rencontre</button>
       <label class="switch">
         <input id="autoToggle" type="checkbox"/>
-        <span>Auto-combat (idle)</span>
+        <span>Auto-combat sécurisé (idle)</span>
       </label>
     </div>
 
@@ -53,6 +53,11 @@
 
     <progress id="hpBar" value="0" max="1"></progress>
     <progress id="eHpBar" value="0" max="1"></progress>
+
+    <section class="panel subtle">
+      <h3>Contrats quotidiens</h3>
+      <div id="bounties"></div>
+    </section>
   </section>
 
   <aside class="panel log">
@@ -61,16 +66,14 @@
   </aside>
 </main>
 
-<footer class="footnote">Idle online + offline : l’auto-combat est moins efficace, mais grind en arrière-plan.</footer>
+<footer class="footnote">Idle online + offline : auto-combat sécurisé et gains hors-ligne plafonnés.</footer>
 
 <script src="js/core.js"></script>
 <script src="js/loot.js"></script>
 <script src="js/combat.js"></script>
 <script>
   GameCore.ensureGameOrRedirect('index.html');
-  // Bonus offline : calcule les gains depuis la dernière session
   GameCore.applyOfflineProgress(Combat.offlineSim);
-
   Combat.initUI();
 </script>
 </body>

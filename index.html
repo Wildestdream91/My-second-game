@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Création du personnage — Idle ARPG</title>
+  <title>Création du personnage — Idle ARPG v3</title>
   <link rel="stylesheet" href="css/style.css"/>
 </head>
 <body class="bg">
 <header class="topbar">
-  <h1>Idle ARPG — Création du personnage</h1>
+  <h1>Idle ARPG v3 — Création du personnage</h1>
   <nav>
     <a href="index.html" class="active">Création</a>
     <a href="game.html">Combat</a>
@@ -52,12 +52,11 @@
 
 <script src="js/core.js"></script>
 <script>
-  // peupler les stats preview dynamiquement si tu veux (optionnel)
   document.getElementById('createForm').addEventListener('submit', (e)=>{
     e.preventDefault();
     const name = document.getElementById('heroName').value.trim();
     const cls  = document.getElementById('heroClass').value;
-    GameCore.newGame(name, cls); // init + save
+    GameCore.newGame(name, cls);
     location.href = 'game.html';
   });
 </script>
