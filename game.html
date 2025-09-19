@@ -3,16 +3,17 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Combat — Idle ARPG v3</title>
+  <title>Combat — Idle ARPG v4</title>
   <link rel="stylesheet" href="css/style.css"/>
 </head>
 <body class="bg">
 <header class="topbar">
-  <h1>Idle ARPG v3 — Combat</h1>
+  <h1>Idle ARPG v4 — Combat</h1>
   <nav>
     <a href="index.html">Création</a>
     <a href="game.html" class="active">Combat</a>
     <a href="inventory.html">Inventaire</a>
+    <a href="shop.html">Campement</a>
     <a href="journal.html">Journal</a>
   </nav>
 </header>
@@ -29,9 +30,9 @@
     <div class="zoneRow">
       <label>Zone :
         <select id="zoneSelect">
-          <option value="foret">Forêt Maudite (1d3, faible butin)</option>
-          <option value="crypte">Crypte Silencieuse (1d6, butin moyen)</option>
-          <option value="sanctuaire">Sanctuaire Cendré (2d6, butin élevé)</option>
+          <option value="foret">Forêt Maudite</option>
+          <option value="crypte">Crypte Silencieuse</option>
+          <option value="sanctuaire">Sanctuaire Cendré</option>
         </select>
       </label>
       <button id="newEncounter" class="btn">Nouvelle rencontre</button>
@@ -43,6 +44,7 @@
 
     <div class="enemyCard" id="enemyCard" hidden>
       <div><b id="eName">—</b> (Lv <span id="eLvl">1</span>)</div>
+      <div>Type: <span id="eType">—</span></div>
       <div>HP: <span id="eHP">0</span>/<span id="eHPmax">0</span></div>
       <div>Dégâts: <span id="eDice">—</span> | DEF: <span id="eDef">—</span></div>
       <div class="actions">
@@ -53,11 +55,6 @@
 
     <progress id="hpBar" value="0" max="1"></progress>
     <progress id="eHpBar" value="0" max="1"></progress>
-
-    <section class="panel subtle">
-      <h3>Contrats quotidiens</h3>
-      <div id="bounties"></div>
-    </section>
   </section>
 
   <aside class="panel log">
@@ -66,7 +63,7 @@
   </aside>
 </main>
 
-<footer class="footnote">Idle online + offline : auto-combat sécurisé et gains hors-ligne plafonnés.</footer>
+<footer class="footnote">Les démons craignent tes Uniques 🔥 — et l’auto-combat s’arrête si HP < 25%.</footer>
 
 <script src="js/core.js"></script>
 <script src="js/loot.js"></script>

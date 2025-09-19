@@ -3,16 +3,17 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Inventaire — Idle ARPG v3</title>
+  <title>Inventaire — Idle ARPG v4</title>
   <link rel="stylesheet" href="css/style.css"/>
 </head>
 <body class="bg">
 <header class="topbar">
-  <h1>Idle ARPG v3 — Inventaire</h1>
+  <h1>Idle ARPG v4 — Inventaire</h1>
   <nav>
     <a href="index.html">Création</a>
     <a href="game.html">Combat</a>
     <a href="inventory.html" class="active">Inventaire</a>
+    <a href="shop.html">Campement</a>
     <a href="journal.html">Journal</a>
   </nav>
 </header>
@@ -51,7 +52,7 @@
   </aside>
 </main>
 
-<footer class="footnote">Clic gauche: équiper. Clic droit: équiper / vendre / jeter.</footer>
+<footer class="footnote">Clic gauche: équiper. Clic droit: équiper / vendre / jeter / utiliser.</footer>
 
 <script src="js/core.js"></script>
 <script src="js/loot.js"></script>
@@ -68,11 +69,13 @@
     byId('slotChest').textContent  = eq.chest?.name  || '—';
     byId('slotRing').textContent   = eq.ring?.name   || '—';
     byId('slotAmulet').textContent = eq.amulet?.name || '—';
+    const setText = Loot.activeSetText();
     byId('charStats').innerHTML = `
       <div><b>${s.name}</b> (${s.cls}) — Lv ${s.level}</div>
       <div>HP ${s.hp}/${s.hpMax} — Mana ${s.mana}/${s.manaMax} — Or ${s.gold}</div>
       <div>FOR ${s.str} — DEX ${s.dex} — VIT ${s.vit} — ÉNE ${s.ene}</div>
       <div>ATQ ${Loot.totalAttack()} — DEF ${Loot.totalDefense()} — Crit ${Loot.totalCrit()}%</div>
+      <div>${setText}</div>
     `;
   }
 
@@ -91,26 +94,32 @@
                            (it.slot==='shield') ? '🛡️' :
                            (it.slot==='head') ? '🪖' :
                            (it.slot==='chest') ? '🥋' :
-                           (it.slot==='ring') ? '💍' : '🧿';
+                           (it.slot==='ring') ? '💍' :
+                           (it.slot==='amulet') ? '🧿' : '🧪';
 
         const tip = document.createElement("div");
         tip.className = "tooltip";
-        tip.innerText = `${it.name}
-Rareté: ${it.rarity}
-ATQ ${it.affixes.atk||0}  DEF ${it.affixes.def||0}
-Crit ${it.affixes.crit||0}%
-Valeur: ${it.affixes.value||1} or`;
+        tip.innerText = Loot.tooltipText(it);
         slot.appendChild(tip);
         slot.onmouseenter = ()=>{ tip.style.display="block"; };
         slot.onmouseleave = ()=>{ tip.style.display="none"; };
 
-        slot.onclick = ()=>{ Loot.toggleEquip(i); GameCore.save(); renderSheet(); renderInventory(); };
+        slot.onclick = ()=>{
+          if(it.type==='potion'){ Loot.useConsumable(i); }
+          else { Loot.toggleEquip(i); }
+          GameCore.save(); renderSheet(); renderInventory();
+        };
         slot.oncontextmenu = (e)=>{
           e.preventDefault();
-          const choice = prompt(`Action sur ${it.name} :\n[1] Équiper / [2] Vendre (${it.affixes.value||1} or) / [3] Jeter`);
+          const actions = it.type==='potion'
+            ? `Utiliser / Vendre (${it.affixes.value||1} or) / Jeter`
+            : `Équiper / Vendre (${it.affixes.value||1} or) / Jeter`;
+          const choice = prompt(`Action sur ${it.name} :\n[1] ${it.type==='potion'?'Utiliser':'Équiper'} / [2] Vendre / [3] Jeter`);
           if(choice==="2"){ GameCore.state.gold += (it.affixes.value||1); GameCore.state.bag.splice(i,1); }
           else if(choice==="3"){ GameCore.state.bag.splice(i,1); }
-          else { Loot.toggleEquip(i); }
+          else {
+            if(it.type==='potion') Loot.useConsumable(i); else Loot.toggleEquip(i);
+          }
           GameCore.save(); renderSheet(); renderInventory();
         };
       }
