@@ -12,7 +12,7 @@
   <nav>
     <a href="index.html">Création</a>
     <a href="game.html">Combat</a>
-    <a class="active" href="inventory.html">Inventaire</a>
+    <a href="inventory.html" class="active">Inventaire</a>
     <a href="shop.html">Campement</a>
     <a href="journal.html">Journal</a>
   </nav>
@@ -38,7 +38,7 @@
     <h3>Sac (40 places) — clic pour menu</h3>
     <div id="inventoryGrid" class="invGrid"></div>
     <div class="row" style="margin-top:8px;">
-      <button id="sellTrash" class="btn">Vendre tout (sauf rares/uniques/équipés)</button>
+      <button id="sellTrash" class="btn">Vendre communs</button>
       <button id="exportBtn" class="btn">Exporter sauvegarde</button>
       <label class="btn">Importer sauvegarde
         <input id="importFile" type="file" accept="application/json" style="display:none">
@@ -52,6 +52,7 @@
   </aside>
 </main>
 
+<!-- Context menu -->
 <div id="ctxMenu" class="ctxMenu" hidden></div>
 
 <script src="js/core.js"></script>
@@ -148,7 +149,10 @@
       const slotName = e.currentTarget.getAttribute('data-slot');
       const it = GameCore.state.equipment[slotName];
       const x = e.pageX, y = e.pageY;
-      if(!it){ openMenu(x,y, `<div class="mempty">Aucun objet équipé (${slotName}).</div>`); return; }
+      if(!it){
+        openMenu(x,y, `<div class="mempty">Aucun objet équipé (${slotName}).</div>`);
+        return;
+      }
       const html = `
         <button class="mitem" data-act="unequip">⬅️ Retirer</button>
         <button class="mitem" data-act="sell">💰 Vendre</button>

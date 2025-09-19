@@ -13,7 +13,7 @@
     <a href="index.html">Création</a>
     <a href="game.html">Combat</a>
     <a href="inventory.html">Inventaire</a>
-    <a class="active" href="shop.html">Campement</a>
+    <a href="shop.html" class="active">Campement</a>
     <a href="journal.html">Journal</a>
   </nav>
 </header>
@@ -37,9 +37,7 @@
 <script>
   GameCore.ensureGameOrRedirect('index.html');
   const s = GameCore.state;
-  if(!s.shop){ s.shop = { lastReset: GameCore.state.lastDailyReset || 0, potionsBought:0 }; GameCore.save(); }
-  if(s.shop.lastReset !== GameCore.state.lastDailyReset){ s.shop.potionsBought = 0; s.shop.lastReset = GameCore.state.lastDailyReset; GameCore.save(); }
-
+  if(!s.shop){ s.shop = { lastReset: 0, potionsBought:0 }; GameCore.save(); }
   function render(){
     document.getElementById('potionLeft').textContent = Math.max(0, 5 - (GameCore.state.shop?.potionsBought||0));
   }
