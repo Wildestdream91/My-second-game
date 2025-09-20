@@ -1,14 +1,28 @@
 /* ================================
-   Idle ARPG v7.0 FR - combat.js
-   Refonte combats + actes/zones
+   Idle ARPG v7.2 FR - combat.js
+   Combats fiables + actes/zones + difficulté
    ================================ */
+
+// ---------- Difficulté ----------
+const DIFFICULTIES = {
+  "Facile":    { hp:0.8,  dmg:0.8,  def:0.9,  xp:1.0,  gold:1.0 },
+  "Normal":    { hp:1.0,  dmg:1.0,  def:1.0,  xp:1.0,  gold:1.0 },
+  "Difficile": { hp:1.25, dmg:1.20, def:1.10, xp:1.10, gold:1.10 },
+  "Enfer":     { hp:1.6,  dmg:1.50, def:1.25, xp:1.25, gold:1.25 }
+};
+function D() {
+  const d = GameCore?.state?.difficulty || "Normal";
+  return DIFFICULTIES[d] || DIFFICULTIES["Normal"];
+}
+// Init défaut si absent
+if (GameCore && !GameCore.state.difficulty) { GameCore.state.difficulty = "Normal"; GameCore.save(); }
 
 const Combat = {
   enemy: null,
   auto: false,
   timer: null,
 
-  // === Acts & Zones (3 zones + 1 boss par acte) ===
+  // --- Acts & Zones ---
   groups(){
     return [
       { act:1, label:"Acte I — Plaine de Sang", zones:[
@@ -44,7 +58,7 @@ const Combat = {
     ];
   },
 
-  // Conditions de déblocage (style D2 simplifié)
+  // Déblocage actes (style D2 simplifié)
   lockInfo(state){
     return {
       req:{2:12,3:20,4:30,5:40},
@@ -58,7 +72,7 @@ const Combat = {
     };
   },
 
-  /* ---------- Utilitaires ---------- */
+  // --- Utils ---
   findZone(zoneKey){
     for(const g of this.groups()){
       const z = g.zones.find(z=>z.key===zoneKey);
@@ -66,32 +80,32 @@ const Combat = {
     }
     return null;
   },
-  actOfZone(zoneKey){
-    const f = this.findZone(zoneKey);
-    return f ? f.group.act : 1;
-  },
 
-  /* ---------- Rencontre ---------- */
+  // --- Rencontre ---
   newEncounter(zoneKey){
     const f = this.findZone(zoneKey);
-    if(!f) return;
+    if(!f){ GameCore.log("Zone invalide."); return; }
     const {group, zone} = f;
-
-    const name = zone.monsters[Math.floor(Math.random()*zone.monsters.length)];
     const act = group.act;
 
-    // Échelle de stats par acte
-    const eLvl = act*2 + Math.floor(Math.random()*5);
-    const eHPmax = 30 + act*18 + Math.floor(Math.random()*6);
-    const eDef    = 3*act + Math.floor(Math.random()*2);
-    const diceFaces = 6 + act*3;
+    // Base stats par acte
+    const baseLvl  = act*5 + Math.floor(Math.random()*5);
+    const baseHP   = 35 + act*28 + Math.floor(Math.random()*10);
+    const baseDef  = 4*act + Math.floor(Math.random()*3);
+    const faces    = 6 + act*4;
+
+    // Applique difficulté
+    const hpMax = Math.max(1, Math.floor(baseHP * D().hp));
+    const def   = Math.max(0, Math.floor(baseDef * D().def));
+    const name  = zone.monsters[Math.floor(Math.random()*zone.monsters.length)];
+
     this.enemy = {
       name,
-      level: eLvl,
-      hp: eHPmax,
-      hpMax: eHPmax,
-      def: eDef,
-      dice: [1, diceFaces],
+      level: baseLvl,
+      hp: hpMax,
+      hpMax: hpMax,
+      def: def,
+      dice: [1, Math.max(2, Math.floor(faces))],
       boss: zone.boss || ["Andariel","Duriel","Méphisto","Diablo","Baal"].includes(name),
       act
     };
@@ -105,8 +119,7 @@ const Combat = {
   },
 
   _uiEnemySync(){
-    const e = this.enemy;
-    if(!e) return;
+    const e = this.enemy; if(!e) return;
     const qs = (id)=>document.getElementById(id);
     if(qs("eName")) qs("eName").textContent = e.name;
     if(qs("eLvl")) qs("eLvl").textContent = e.level;
@@ -114,12 +127,13 @@ const Combat = {
     if(qs("eHPmax")) qs("eHPmax").textContent = e.hpMax;
     if(qs("eDef")) qs("eDef").textContent = e.def;
     if(qs("eDice")) qs("eDice").textContent = `${e.dice[0]}d${e.dice[1]}`;
-    if(qs("eHpBar")) { qs("eHpBar").max = e.hpMax; qs("eHpBar").value = e.hp; }
+    const bar = document.getElementById("eHpBar");
+    if(bar){ bar.max = e.hpMax; bar.value = e.hp; }
     const ec = document.getElementById("enemyCard");
     if(ec) ec.classList.toggle("bossFight", !!e.boss);
   },
 
-  /* ---------- Combat ---------- */
+  // --- Combat ---
   rollDice(nb,faces){
     let sum=0;
     for(let i=0;i<nb;i++) sum += 1 + Math.floor(Math.random()*faces);
@@ -131,74 +145,88 @@ const Combat = {
     const s = GameCore.state;
     const e = this.enemy;
 
-    // --- dégâts joueur ---
+    // 1) Dégâts joueur -> ennemi
     const baseRoll = this.rollDice(1, 6);
-    const atk = GameCore.atkTotal(); // STR + bonus équipement
-    let playerDmg = baseRoll + Math.floor(atk*0.8); // base
-    // Critique (x2) selon GameCore.critTotal()
-    const critChance = GameCore.critTotal()/100;
-    const isCrit = Math.random() < critChance;
+    const atk = GameCore.atkTotal();
+    let playerDmg = baseRoll + Math.floor(atk*1.0);   // un peu plus punchy
+    const isCrit = Math.random() < (GameCore.critTotal()/100);
     if(isCrit) playerDmg = Math.floor(playerDmg*2);
+    // réduction par DEF ennemie (douce)
+    playerDmg = Math.max(1, playerDmg - Math.floor(e.def/8));
 
-    // Réduction par DEF ennemie (douce)
-    playerDmg = Math.max(1, playerDmg - Math.floor(e.def/6));
     e.hp -= playerDmg;
-    if(e.hp < 0) e.hp = 0;
+    if (e.hp < 0) e.hp = 0;
+    this._uiEnemySync();
 
-    // --- dégâts ennemis ---
+    GameCore.log(`Vous infligez ${playerDmg}${isCrit?" (CRIT)":""} dmg.`);
+
+    // 1-bis) Vérif mort ennemie (garde immédiate)
+    if (e.hp <= 0) {
+      this._handleEnemyDeath(); // évite les cas "hp=0 mais pas mort"
+      return; // on quitte avant l'attaque ennemie
+    }
+
+    // 2) Dégâts ennemi -> joueur
     let enemyRaw = this.rollDice(e.dice[0], e.dice[1]) + (e.act*2);
-    // Réduction par DEF du joueur, mais minimum 1
+    enemyRaw = Math.floor(enemyRaw * D().dmg); // difficulté
     const def = GameCore.defTotal();
     const enemyDmg = Math.max(1, enemyRaw - Math.floor(def/10));
     s.hp -= enemyDmg;
-    if(s.hp < 0) s.hp = 0;
+    if (s.hp < 0) s.hp = 0;
 
-    // UI sync
-    this._uiEnemySync();
-    if(document.getElementById("barHpFill")){
-      document.getElementById("barHpFill").style.width = (s.hp/s.hpMax*100)+"%";
-      document.getElementById("barHpText").textContent = `HP ${s.hp}/${s.hpMax}`;
-    }
+    // UI joueur
+    const f = (id)=>document.getElementById(id);
+    if(f("barHpFill")) f("barHpFill").style.width = (s.hp/s.hpMax*100)+"%";
+    if(f("barHpText")) f("barHpText").textContent = `HP ${s.hp}/${s.hpMax}`;
 
-    GameCore.log(`Vous infligez ${playerDmg}${isCrit?" (CRIT)":""} dmg. L’ennemi inflige ${enemyDmg} dmg.`);
+    GameCore.log(`L’ennemi inflige ${enemyDmg} dmg.`);
 
-    if(e.hp <= 0){
-      this.victory();
-    } else if(s.hp <= 0){
-      GameCore.log("☠️ Vous êtes mort ! Retour au campement (-10 or).");
-      s.hp = s.hpMax; s.mana = s.manaMax; s.gold = Math.max(0, s.gold-10);
+    // 2-bis) Vérif mort joueur
+    if (s.hp <= 0) {
+      GameCore.log("☠️ Vous êtes mort ! Retour au campement (-20 or).");
+      s.hp = s.hpMax; s.mana = s.manaMax; s.gold = Math.max(0, s.gold-20);
       this.enemy = null;
       const card = document.getElementById("enemyCard"); if(card) card.hidden = true;
       GameCore.save();
-    } else {
-      GameCore.save();
+      return;
     }
+
+    GameCore.save();
+  },
+
+  // Gestion de la mort de l’ennemi (séparée pour être appelée à plusieurs endroits)
+  _handleEnemyDeath(){
+    if (!this.enemy) return; // déjà nettoyé
+    // Double garde: si quelqu’un veut encore attaquer alors que hp<=0
+    if (this.enemy.hp > 0) return;
+    this.victory();
   },
 
   victory(){
-    const e = this.enemy;
+    const e = this.enemy; if(!e) return; // garde
     const act = e.act;
 
-    // Récompenses (scaling par acte + boss bonus)
+    // Récompenses (scaling + difficulté)
     const baseXP = 10 + act*7 + Math.floor(e.level/2);
     const baseGold = 5 + act*4 + Math.floor(e.level/3);
-    const xpGain = e.boss ? Math.floor(baseXP*5) : baseXP;
-    const goldGain = e.boss ? Math.floor(baseGold*4) : baseGold;
+    const xpGain = Math.floor((e.boss ? baseXP*5 : baseXP) * D().xp);
+    const goldGain = Math.floor((e.boss ? baseGold*4 : baseGold) * D().gold);
 
     GameCore.addXP(xpGain);
     GameCore.addGold(goldGain);
     GameCore.log(`🏆 ${e.name} vaincu ! +${xpGain} XP, +${goldGain} or.`);
 
-    // Progression boss → débloque acte suivant
+    // Progression boss
     if(e.boss && ["Andariel","Duriel","Méphisto","Diablo","Baal"].includes(e.name)){
       GameCore.state.bossesDefeated[e.name] = true;
       GameCore.log(`🔥 ${e.name} est tombé ! L’acte suivant est débloqué.`);
     }
 
-    // Loot (si Loot.generateLoot existe)
+    // Loot (si Loot est chargé)
     try {
       if (typeof Loot !== "undefined" && Loot.generateLoot) {
-        Loot.generateLoot(GameCore.mfTotal ? GameCore.mfTotal() : 0);
+        const mf = GameCore.mfTotal ? GameCore.mfTotal() : 0;
+        Loot.generateLoot(mf, {act, boss: !!e.boss});
         if (Loot.renderInventory && document.getElementById("inventoryGrid")) {
           Loot.renderInventory();
         }
@@ -209,12 +237,11 @@ const Combat = {
     this.enemy = null;
     const card = document.getElementById("enemyCard"); if(card) card.hidden = true;
 
-    // Rafraîchit l’UI
     if (GameCore.uiRefreshStatsIfPresent) GameCore.uiRefreshStatsIfPresent();
     GameCore.save();
   },
 
-  /* ---------- Auto-combat ---------- */
+  // --- Auto-combat ---
   toggleAuto(val){
     this.auto = val;
     if(val){
@@ -229,7 +256,7 @@ const Combat = {
     GameCore.save();
   },
 
-  /* ---------- UI Actes & Zones ---------- */
+  // --- UI actes/zones ---
   populateZonesForAct(act){
     const group = this.groups().find(g=>g.act===act);
     const zoneSelect = document.getElementById("zoneSelect");
@@ -262,14 +289,11 @@ const Combat = {
     }
   },
 
-  /* ---------- Initialisation UI ---------- */
+  // --- Init UI ---
   initUI(renderPlayer){
-    // Actes
     this.renderActMap();
-    // Par défaut, affiche Acte I zones
     this.populateZonesForAct(1);
 
-    // Boutons
     const attackBtn = document.getElementById("attackBtn");
     if(attackBtn) attackBtn.onclick = ()=>this.attack();
 
@@ -293,7 +317,17 @@ const Combat = {
     const autoT = document.getElementById("autoToggle");
     if(autoT) autoT.onchange = (e)=>this.toggleAuto(e.target.checked);
 
-    // Premier rendu joueur
+    // Diff (si présent dans la page)
+    const diffSel = document.getElementById("diffSelect");
+    if (diffSel){
+      diffSel.value = GameCore.state.difficulty || "Normal";
+      diffSel.onchange = ()=>{
+        GameCore.state.difficulty = diffSel.value;
+        GameCore.save();
+        GameCore.log(`⚙️ Difficulté: ${diffSel.value}`);
+      };
+    }
+
     if (typeof renderPlayer === "function") renderPlayer();
     if (GameCore.uiRefreshStatsIfPresent) GameCore.uiRefreshStatsIfPresent();
   }
