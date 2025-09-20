@@ -3,41 +3,40 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Idle ARPG v5.3 — Inventaire</title>
+  <title>Inventaire — Idle ARPG v6.0 FR</title>
   <link rel="stylesheet" href="css/style.css"/>
 </head>
 <body class="bg">
 <header class="topbar">
-  <h1>Idle ARPG v5.3 — Inventaire</h1>
+  <h1>Inventaire</h1>
   <nav>
     <a href="index.html">Création</a>
     <a href="game.html">Combat</a>
     <a href="inventory.html" class="active">Inventaire</a>
     <a href="shop.html">Campement</a>
     <a href="journal.html">Journal</a>
+    <a href="ladder.html">Classement</a>
   </nav>
 </header>
 
 <main class="columns">
   <section class="panel">
-    <h3>Équipement (clic pour menu)</h3>
-    <div class="equipGrid">
-      <div class="equipSlot" data-slot="weapon">Arme: <span id="slotWeapon">—</span></div>
-      <div class="equipSlot" data-slot="shield">Bouclier: <span id="slotShield">—</span></div>
-      <div class="equipSlot" data-slot="head">Tête: <span id="slotHead">—</span></div>
-      <div class="equipSlot" data-slot="chest">Torso: <span id="slotChest">—</span></div>
-      <div class="equipSlot" data-slot="ring">Anneau: <span id="slotRing">—</span></div>
-      <div class="equipSlot" data-slot="amulet">Amulette: <span id="slotAmulet">—</span></div>
+    <h3>Équipement</h3>
+    <div class="equipBoard">
+      <div class="slotE head equipSlot" data-slot="head"><span id="slotHead">—</span></div>
+      <div class="slotE amulet equipSlot" data-slot="amulet"><span id="slotAmulet">—</span></div>
+      <div class="slotE weapon equipSlot" data-slot="weapon"><span id="slotWeapon">—</span></div>
+      <div class="slotE chest equipSlot" data-slot="chest"><span id="slotChest">—</span></div>
+      <div class="slotE shield equipSlot" data-slot="shield"><span id="slotShield">—</span></div>
+      <div class="slotE ring equipSlot" data-slot="ring"><span id="slotRing">—</span></div>
     </div>
-
-    <h3>Stats</h3>
     <div id="charStats"></div>
   </section>
 
   <section class="panel">
-    <h3>Sac (40 places) — clic pour menu</h3>
+    <h3>Sac (40 cases)</h3>
     <div id="inventoryGrid" class="invGrid"></div>
-    <div class="row" style="margin-top:8px;">
+    <div class="row">
       <button id="sellTrash" class="btn">Vendre communs</button>
       <button id="exportBtn" class="btn">Exporter sauvegarde</button>
       <label class="btn">Importer sauvegarde
@@ -52,135 +51,9 @@
   </aside>
 </main>
 
-<!-- Context menu -->
 <div id="ctxMenu" class="ctxMenu" hidden></div>
 
 <script src="js/core.js"></script>
 <script src="js/loot.js"></script>
-<script>
-  GameCore.ensureGameOrRedirect('index.html');
-  const ctx = document.getElementById('ctxMenu');
-  let ctxCloseTimer=null;
-
-  function openMenu(x,y, html){
-    ctx.innerHTML = html;
-    ctx.style.left = x+'px';
-    ctx.style.top = y+'px';
-    ctx.hidden = false;
-    clearTimeout(ctxCloseTimer);
-    document.addEventListener('click', onDocClickClose, { once:true });
-  }
-  function onDocClickClose(){ ctxCloseTimer=setTimeout(()=> ctx.hidden=true, 50); }
-
-  function renderSheet() {
-    const s = GameCore.state;
-    const eq = s.equipment;
-    const byId = id=>document.getElementById(id);
-    byId('slotWeapon').textContent = eq.weapon?.name || '—';
-    byId('slotShield').textContent = eq.shield?.name || '—';
-    byId('slotHead').textContent   = eq.head?.name   || '—';
-    byId('slotChest').textContent  = eq.chest?.name  || '—';
-    byId('slotRing').textContent   = eq.ring?.name   || '—';
-    byId('slotAmulet').textContent = eq.amulet?.name || '—';
-    const setText = Loot.activeSetText();
-    byId('charStats').innerHTML = `
-      <div><b>${s.name}</b> (${s.cls}) — Lv ${s.level}</div>
-      <div>HP ${s.hp}/${s.hpMax} — Mana ${s.mana}/${s.manaMax} — Or ${s.gold}</div>
-      <div>FOR ${s.str} — DEX ${s.dex} — VIT ${s.vit} — ÉNE ${s.ene}</div>
-      <div>ATQ ${Loot.totalAttack()} — DEF ${Loot.totalDefense()} — Crit ${Loot.totalCrit()}% — MF ${Loot.totalMF()}%</div>
-      <div>${setText}</div>
-    `;
-  }
-
-  function slotEmojiFor(slot){
-    return slot==='weapon'?'🗡️':slot==='shield'?'🛡️':slot==='head'?'🪖':slot==='chest'?'🥋':slot==='ring'?'💍':slot==='amulet'?'🧿':'🧪';
-  }
-
-  function renderInventory() {
-    const grid = document.getElementById("inventoryGrid");
-    grid.innerHTML = "";
-    const s = GameCore.state;
-
-    for (let i=0; i<40; i++) {
-      const slot = document.createElement("div");
-      slot.className = "slot";
-      const it = s.bag[i];
-      if (it) {
-        slot.classList.add(it.rarity);
-        slot.textContent = slotEmojiFor(it.slot);
-
-        const tip = document.createElement("div");
-        tip.className = "tooltip";
-        tip.innerText = Loot.tooltipText(it);
-        slot.appendChild(tip);
-        slot.onmouseenter = ()=>{ tip.style.display="block"; };
-        slot.onmouseleave = ()=>{ tip.style.display="none"; };
-
-        slot.onclick = (e)=>{
-          e.stopPropagation();
-          const items = [];
-          if(it.type==='potion'){
-            items.push(`<button data-act="use" class="mitem">🧪 Utiliser</button>`);
-          }else{
-            items.push(`<button data-act="equip" class="mitem">🗡️ Équiper</button>`);
-          }
-          items.push(`<button data-act="sell" class="mitem">💰 Vendre</button>`);
-          items.push(`<button data-act="drop" class="mitem">🗑️ Jeter</button>`);
-          openMenu(e.pageX, e.pageY, items.join(''));
-          ctx.querySelectorAll('.mitem').forEach(btn=>{
-            btn.onclick = ()=>{
-              const act = btn.getAttribute('data-act');
-              if(act==='use') Loot.useConsumable(i);
-              if(act==='equip') Loot.toggleEquip(i);
-              if(act==='sell'){ GameCore.state.gold += (it.affixes.value||1); GameCore.state.bag.splice(i,1); GameCore.addLog(`Vendu: ${it.name}`); }
-              if(act==='drop'){ GameCore.state.bag.splice(i,1); GameCore.addLog(`Jeté: ${it.name}`); }
-              GameCore.save(); renderSheet(); renderInventory(); ctx.hidden=true;
-            };
-          });
-        };
-      }
-      grid.appendChild(slot);
-    }
-    document.getElementById('logBox').innerHTML = GameCore.logsHTML();
-  }
-
-  document.querySelectorAll('.equipSlot').forEach(div=>{
-    div.addEventListener('click',(e)=>{
-      const slotName = e.currentTarget.getAttribute('data-slot');
-      const it = GameCore.state.equipment[slotName];
-      const x = e.pageX, y = e.pageY;
-      if(!it){
-        openMenu(x,y, `<div class="mempty">Aucun objet équipé (${slotName}).</div>`);
-        return;
-      }
-      const html = `
-        <button class="mitem" data-act="unequip">⬅️ Retirer</button>
-        <button class="mitem" data-act="sell">💰 Vendre</button>
-        <button class="mitem" data-act="drop">🗑️ Jeter</button>
-      `;
-      openMenu(x,y, html);
-      ctx.querySelectorAll('.mitem').forEach(btn=>{
-        btn.onclick = ()=>{
-          const act = btn.getAttribute('data-act');
-          if(act==='unequip'){ Loot.unequip(slotName); }
-          if(act==='sell'){ const taken = Loot.unequip(slotName, true); if(taken){ GameCore.state.gold += (taken.affixes?.value||1); GameCore.addLog(`Vendu: ${taken.name}`);} }
-          if(act==='drop'){ Loot.unequip(slotName, false, true); }
-          GameCore.save(); renderSheet(); renderInventory(); ctx.hidden=true;
-        };
-      });
-    });
-  });
-
-  document.getElementById('sellTrash').onclick = ()=>{
-    const res = Loot.sellCommons();
-    GameCore.addLog(`Vente rapide : ${res.count} communs → ${res.gold} or`);
-    GameCore.save(); renderSheet(); renderInventory();
-  };
-  document.getElementById('exportBtn').onclick = ()=> GameCore.exportSave();
-  document.getElementById('importFile').addEventListener('change', (e)=> GameCore.importSave(e.target.files[0]).then(()=>{renderSheet(); renderInventory();}));
-
-  renderSheet();
-  renderInventory();
-</script>
 </body>
 </html>
