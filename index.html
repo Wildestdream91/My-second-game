@@ -34,26 +34,19 @@
   </form>
 </main>
 
-<!-- Overlay Boss (global, utilisé dans game.html aussi) -->
-<div id="bossVictory" class="bossOverlay" hidden>
-  <div class="bossBox">
-    <h2 id="bossVictoryTitle"></h2>
-    <p id="bossVictoryMsg"></p>
-    <button id="bossVictoryBtn" class="btn primary">Continuer</button>
-  </div>
-</div>
-
 <script src="js/core.js"></script>
 <script>
-  // Charger sauvegarde
+  // Charger la sauvegarde
   GameCore.load();
 
-  // Si un perso existe déjà, aller direct au jeu
+  // Si un perso existe déjà → aller directement au jeu
   if(GameCore.state.created){
     location.href="game.html";
   } else {
-    // Affiche le formulaire après l’intro
-    setTimeout(()=> document.getElementById("createPanel").hidden=false, 2000);
+    // Affiche la création après l’intro
+    setTimeout(()=> {
+      document.getElementById("createPanel").hidden=false;
+    }, 2000);
   }
 
   // Création du perso
@@ -64,11 +57,6 @@
       document.getElementById("heroClass").value
     );
     location.href="game.html";
-  });
-
-  // Bouton "Continuer" de l’overlay boss
-  document.getElementById("bossVictoryBtn").addEventListener("click", ()=>{
-    document.getElementById("bossVictory").hidden=true;
   });
 </script>
 </body>
