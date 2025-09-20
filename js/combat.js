@@ -166,8 +166,8 @@ const Combat = {
     if(e.hp <= 0){
       this.victory();
     } else if(s.hp <= 0){
-      GameCore.log("☠️ Vous êtes mort ! Retour au campement (-20 or).");
-      s.hp = s.hpMax; s.mana = s.manaMax; s.gold = Math.max(0, s.gold-20);
+      GameCore.log("☠️ Vous êtes mort ! Retour au campement (-10 or).");
+      s.hp = s.hpMax; s.mana = s.manaMax; s.gold = Math.max(0, s.gold-10);
       this.enemy = null;
       const card = document.getElementById("enemyCard"); if(card) card.hidden = true;
       GameCore.save();
