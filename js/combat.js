@@ -28,4 +28,160 @@ const Combat = {
         {key:"ivBoss", name:"Sanctuaire du Chaos (Diablo)", monsters:["Diablo"], boss:true}
       ]},
       { act:5, label:"Acte V — Mont Arreat", zones:[
-        {key:"v1", name:"Plateau des Hurlants", monsters:["Bar
+        {key:"v1", name:"Plateau des Hurlants", monsters:["Barbare corrompu","Sorcier corrompu","Loup corrompu","Chaman corrompu","Archer corrompu","Guerrier squelette","Zombie gelé","Spectre de glace","Sorcier de glace","Chien gelé","Géant du froid","Succube du givre","Esprit glacial","Sorcière corrompue","Corbeau de glace","Balrog gelé","Spectre gelé","Chien démoniaque","Démon du froid","Guerrier corrompu"]},
+        {key:"vBoss", name:"Salle du Trône (Baal)", monsters:["Baal"], boss:true}
+      ]}
+    ];
+  },
+
+  defaultZone(){ return "i1"; },
+
+  // Conditions de déblocage des actes
+  lockInfo(state){
+    return {
+      req:{2:12,3:20,4:30,5:40},
+      access:{
+        1:true,
+        2:(state.level>=12 && state.bossesDefeated.Andariel),
+        3:(state.level>=20 && state.bossesDefeated.Duriel),
+        4:(state.level>=30 && state.bossesDefeated.Méphisto),
+        5:(state.level>=40 && state.bossesDefeated.Diablo)
+      }
+    };
+  },
+
+  zoneAvailable(state, zoneKey){
+    const group = this.groups().find(g=>g.zones.find(z=>z.key===zoneKey));
+    if(!group) return false;
+    const z = group.zones.find(z=>z.key===zoneKey);
+    if(!z) return false;
+    const li = this.lockInfo(state);
+    return li.access[group.act];
+  },
+
+  // Rencontre aléatoire
+  newEncounter(zoneKey){
+    const group = this.groups().find(g=>g.zones.find(z=>z.key===zoneKey));
+    const z = group.zones.find(z=>z.key===zoneKey);
+    const name = z.monsters[Math.floor(Math.random()*z.monsters.length)];
+    this.enemy = {
+      name,
+      level: group.act*5 + Math.floor(Math.random()*5),
+      hp: 30+group.act*20,
+      hpMax: 30+group.act*20,
+      def: 5*group.act,
+      dice: [1,6+group.act*3],
+      boss: z.boss || ["Andariel","Duriel","Méphisto","Diablo","Baal"].includes(name)
+    };
+    document.getElementById("enemyCard").hidden=false;
+    document.getElementById("eName").textContent=this.enemy.name;
+    document.getElementById("eLvl").textContent=this.enemy.level;
+    document.getElementById("eHP").textContent=this.enemy.hp;
+    document.getElementById("eHPmax").textContent=this.enemy.hpMax;
+    document.getElementById("eDef").textContent=this.enemy.def;
+    document.getElementById("eDice").textContent=`${this.enemy.dice[0]}d${this.enemy.dice[1]}`;
+    document.getElementById("eHpBar").max=this.enemy.hpMax;
+    document.getElementById("eHpBar").value=this.enemy.hp;
+    document.getElementById("enemyCard").classList.toggle("bossFight",this.enemy.boss);
+    GameCore.log(`⚔️ Un ${this.enemy.name} apparaît !`);
+  },
+
+  // Attaque
+  attack(){
+    if(!this.enemy) return;
+    const s = GameCore.state;
+    const playerDmg = this.rollDice(1,6+s.str);
+    const enemyDmg = this.rollDice(this.enemy.dice[0],this.enemy.dice[1]) - s.def/5;
+    this.enemy.hp -= playerDmg;
+    if(this.enemy.hp<0) this.enemy.hp=0;
+    s.hp -= Math.max(1,Math.floor(enemyDmg));
+    if(s.hp<0) s.hp=0;
+    document.getElementById("eHP").textContent=this.enemy.hp;
+    document.getElementById("eHpBar").value=this.enemy.hp;
+    document.getElementById("barHpFill").style.width=(s.hp/s.hpMax*100)+"%";
+    document.getElementById("barHpText").textContent=`HP ${s.hp}/${s.hpMax}`;
+    GameCore.log(`Vous infligez ${playerDmg} dégâts. L’ennemi inflige ${Math.max(0,Math.floor(enemyDmg))} dégâts.`);
+    if(this.enemy.hp<=0){
+      this.victory();
+    } else if(s.hp<=0){
+      GameCore.log("☠️ Vous êtes mort ! Retour au campement.");
+      s.hp=s.hpMax; s.mana=s.manaMax; s.gold=Math.max(0,s.gold-20);
+      this.enemy=null;
+      document.getElementById("enemyCard").hidden=true;
+    }
+    GameCore.save();
+  },
+
+  victory(){
+    const s = GameCore.state;
+    GameCore.addXP(20);
+    GameCore.addGold(5);
+    GameCore.log(`🏆 ${this.enemy.name} est vaincu ! +20 XP, +5 or`);
+    if(this.enemy.boss){
+      s.bossesDefeated[this.enemy.name]=true;
+      document.getElementById("bossVictoryTitle").textContent=`${this.enemy.name} est vaincu !`;
+      document.getElementById("bossVictoryMsg").textContent=`L’acte suivant est débloqué !`;
+      document.getElementById("bossVictory").hidden=false;
+    }
+    this.enemy=null;
+    document.getElementById("enemyCard").hidden=true;
+  },
+
+  rollDice(nb,faces){
+    let sum=0;
+    for(let i=0;i<nb;i++){ sum+=1+Math.floor(Math.random()*faces); }
+    return sum;
+  },
+
+  // Auto-combat
+  toggleAuto(val){
+    this.auto=val;
+    if(val){
+      this.timer=setInterval(()=>this.attack(),2000);
+    } else {
+      clearInterval(this.timer);
+    }
+  },
+
+  // Lore
+  loreFor(zoneKey){
+    if(zoneKey.includes("Boss")) return "⚠️ Combat de Boss ! Préparez-vous...";
+    return "";
+  },
+
+  // Mini-carte des actes
+  renderActMap(){
+    const map = document.getElementById("actMap");
+    map.innerHTML="";
+    const li = this.lockInfo(GameCore.state);
+    for(const g of this.groups()){
+      const div=document.createElement("div");
+      div.className="actIcon";
+      if(!li.access[g.act]) div.classList.add("locked");
+      else div.classList.add("unlocked");
+      if(GameCore.state.zone && GameCore.state.zone.startsWith(g.act.toString().toLowerCase())) div.classList.add("current");
+      div.textContent=g.act;
+      map.appendChild(div);
+    }
+  },
+
+  // Initialisation UI
+  initUI(renderPlayer){
+    document.getElementById("attackBtn").onclick=()=>this.attack();
+    document.getElementById("fleeBtn").onclick=()=>{
+      GameCore.log("🏃 Vous fuyez !");
+      this.enemy=null;
+      document.getElementById("enemyCard").hidden=true;
+    };
+    document.getElementById("newEncounter").onclick=()=>{
+      const z=document.getElementById("zoneSelect").value;
+      this.newEncounter(z);
+      renderPlayer();
+    };
+    document.getElementById("autoToggle").onchange=(e)=>this.toggleAuto(e.target.checked);
+    renderPlayer();
+  },
+
+  // Offline simulation placeholder
+  offlineSim(){ return; }
+};
