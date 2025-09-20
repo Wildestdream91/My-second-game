@@ -3,23 +3,18 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Idle ARPG v5.3 — Création</title>
+  <title>Idle ARPG v6.0 FR</title>
   <link rel="stylesheet" href="css/style.css"/>
 </head>
 <body class="bg">
-<header class="topbar">
-  <h1>Idle ARPG v5.3 — Création du personnage</h1>
-  <nav>
-    <a href="index.html" class="active">Création</a>
-    <a href="game.html">Combat</a>
-    <a href="inventory.html">Inventaire</a>
-    <a href="shop.html">Campement</a>
-    <a href="journal.html">Journal</a>
-  </nav>
-</header>
 
-<main class="panel">
-  <h2>Nouvelle partie</h2>
+<div id="intro">
+  <h1 class="introTitle">Idle ARPG v6.0 FR</h1>
+  <p class="introPhrase">Les Enfers s’ouvrent à nouveau…</p>
+</div>
+
+<main id="createPanel" class="panel" hidden>
+  <h2>Création du personnage</h2>
   <form id="createForm" class="grid">
     <label>Pseudo
       <input id="heroName" type="text" placeholder="Votre pseudo" required maxlength="20"/>
@@ -35,28 +30,25 @@
     </label>
     <button type="submit" class="btn primary">Commencer l’aventure</button>
   </form>
-
-  <section class="panel subtle">
-    <h3>Caractéristiques (style Diablo II)</h3>
-    <ul class="bullets">
-      <li><b>Force</b> : dégâts physiques + prérequis équipements</li>
-      <li><b>Dextérité</b> : précision, blocage, armes à distance</li>
-      <li><b>Vitalité</b> : points de vie</li>
-      <li><b>Énergie</b> : mana / ressources magiques</li>
-    </ul>
-  </section>
 </main>
-
-<footer class="footnote">© 2025 — Jeu fan-made, univers original inspiré des ARPG.</footer>
 
 <script src="js/core.js"></script>
 <script>
-  document.getElementById('createForm').addEventListener('submit', (e)=>{
+  // Si un héros existe déjà, redirige directement
+  GameCore.load();
+  if(GameCore.state.created){
+    location.href="game.html";
+  } else {
+    setTimeout(()=> document.getElementById("createPanel").hidden=false, 2000);
+  }
+
+  document.getElementById("createForm").addEventListener("submit", e=>{
     e.preventDefault();
-    const name = document.getElementById('heroName').value.trim();
-    const cls  = document.getElementById('heroClass').value;
-    GameCore.newGame(name, cls);
-    location.href = 'game.html';
+    GameCore.newGame(
+      document.getElementById("heroName").value.trim(),
+      document.getElementById("heroClass").value
+    );
+    location.href="game.html";
   });
 </script>
 </body>
