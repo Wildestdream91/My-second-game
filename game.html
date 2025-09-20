@@ -50,7 +50,7 @@
 
     <!-- Carte ennemi -->
     <div class="enemyCard" id="enemyCard" hidden>
-      <div><b id="eName">—</b> (Lv <span id="eLvl">1</span>) — <span id="eType">—</span></div>
+      <div><b id="eName">—</b> (Lv <span id="eLvl">1</span>)</div>
       <div>HP: <span id="eHP">0</span>/<span id="eHPmax">0</span> | DEF: <span id="eDef">—</span> | Dégâts: <span id="eDice">—</span></div>
       <div class="actions">
         <button id="attackBtn" class="btn primary">⚔️ Attaquer</button>
@@ -69,25 +69,16 @@
   </aside>
 </main>
 
-<!-- Overlay victoire boss -->
-<div id="bossVictory" class="bossOverlay" hidden>
-  <div class="bossBox">
-    <h2 id="bossVictoryTitle"></h2>
-    <p id="bossVictoryMsg"></p>
-    <button id="bossVictoryBtn" class="btn primary">Continuer</button>
-  </div>
-</div>
-
 <footer class="footnote">Boss requis pour progresser à l’acte suivant.</footer>
 
 <script src="js/core.js"></script>
 <script src="js/loot.js"></script>
 <script src="js/combat.js"></script>
 <script>
-  // S’assure que le joueur a un perso
+  // Vérifie que le joueur a un perso
   GameCore.ensureGameOrRedirect("index.html");
 
-  // Rendu des infos joueur
+  // Rendu joueur
   function renderPlayer(){
     const s=GameCore.state;
     document.getElementById("pName").textContent=s.name;
@@ -110,12 +101,6 @@
 
   // Init combat
   Combat.initUI(renderPlayer);
-
-  // Fermer overlay boss
-  document.getElementById("bossVictoryBtn").addEventListener("click", ()=>{
-    document.getElementById("bossVictory").hidden=true;
-    renderPlayer();
-  });
 </script>
 </body>
 </html>
