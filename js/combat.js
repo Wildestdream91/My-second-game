@@ -1,5 +1,5 @@
 /* ================================
-   Idle ARPG v6.0 FR - combat.js
+   Idle ARPG v6.1 FR - combat.js
    Gestion des zones, monstres, combats, boss
    ================================ */
 
@@ -8,7 +8,7 @@ const Combat = {
   auto: false,
   timer: null,
 
-  // === Zones et monstres ===
+  // === Zones et monstres par acte ===
   groups(){
     return [
       { act:1, label:"Acte I — Plaine de Sang", zones:[
@@ -144,7 +144,6 @@ const Combat = {
     GameCore.addGold(5);
     GameCore.log(`🏆 ${this.enemy.name} est vaincu ! +20 XP, +5 or`);
 
-    // Marquer boss vaincu mais SANS pop-up
     if(this.enemy.boss && ["Andariel","Duriel","Méphisto","Diablo","Baal"].includes(this.enemy.name)){
       s.bossesDefeated[this.enemy.name]=true;
       GameCore.log(`🔥 ${this.enemy.name} est tombé ! L’acte suivant est maintenant débloqué.`);
@@ -168,28 +167,23 @@ const Combat = {
     else { clearInterval(this.timer); }
   },
 
-  loreFor(zoneKey){
-    if(zoneKey.includes("Boss")) return "⚠️ Combat de Boss ! Préparez-vous...";
-    return "";
-  },
-
-  renderActMap(){
-    const map=document.getElementById("actMap");
-    if(!map) return;
-    map.innerHTML="";
-    const li=this.lockInfo(GameCore.state);
-    for(const g of this.groups()){
-      const div=document.createElement("div");
-      div.className="actIcon";
-      if(!li.access[g.act]) div.classList.add("locked");
-      else div.classList.add("unlocked");
-      if(GameCore.state.zone && GameCore.state.zone.startsWith(g.act.toString().toLowerCase())) div.classList.add("current");
-      div.textContent=g.act;
-      map.appendChild(div);
-    }
-  },
-
+  // Génération de la liste des zones
   initUI(renderPlayer){
+    const zoneSelect=document.getElementById("zoneSelect");
+    if(zoneSelect){
+      zoneSelect.innerHTML="";
+      for(const g of this.groups()){
+        for(const z of g.zones){
+          if(this.zoneAvailable(GameCore.state,z.key)){
+            const opt=document.createElement("option");
+            opt.value=z.key;
+            opt.textContent=z.name;
+            zoneSelect.appendChild(opt);
+          }
+        }
+      }
+    }
+
     document.getElementById("attackBtn").onclick=()=>this.attack();
     document.getElementById("fleeBtn").onclick=()=>{
       GameCore.log("🏃 Vous fuyez !");
@@ -203,7 +197,5 @@ const Combat = {
     };
     document.getElementById("autoToggle").onchange=(e)=>this.toggleAuto(e.target.checked);
     renderPlayer();
-  },
-
-  offlineSim(){ return; }
+  }
 };
