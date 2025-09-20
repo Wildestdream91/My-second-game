@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Idle ARPG v7 — Inventaire</title>
+  <title>Idle ARPG — Inventaire</title>
   <link rel="stylesheet" href="css/style.css"/>
 </head>
 <body class="bg">
@@ -23,18 +23,10 @@
 <main class="columns">
   <section class="panel">
     <h3>Équipement</h3>
-    <div class="equipBoard">
-      <div class="equipSlot" id="slotHead" title="Tête">—</div>
-      <div class="equipSlot" id="slotAmulet" title="Amulette">—</div>
-      <div class="equipSlot big" id="slotWeapon" title="Arme">—</div>
-      <div class="equipSlot big" id="slotChest" title="Torse">—</div>
-      <div class="equipSlot" id="slotShield" title="Bouclier">—</div>
-      <div class="equipSlot" id="slotRing" title="Anneau">—</div>
-    </div>
+    <div id="equipList" class="equipList"></div>
 
     <h3>Inventaire</h3>
-    <div id="inventoryGrid" class="invGrid"></div>
-    <div id="ctxMenu" class="ctxMenu" hidden></div>
+    <div id="inventoryGrid" class="invList"></div>
   </section>
 
   <aside class="panel">
@@ -57,31 +49,22 @@
 <script src="js/core.js"></script>
 <script src="js/loot.js"></script>
 <script>
-  GameCore.ensureGameOrRedirect?.("index.html");
+  GameCore.ensureGameOrRedirect("index.html");
 
   function spend(stat){
     GameCore.spendStatPoint(stat);
-    updateUI();
-    Loot.renderInventory();
+    updateUI(); Loot.renderInventory();
   }
-
   function updateUI(){
-    document.getElementById("ptsAttr").textContent = GameCore.state.statPts;
-    GameCore.uiRefreshStatsIfPresent?.();
+    document.getElementById("ptsAttr").textContent=GameCore.state.statPts;
+    GameCore.uiRefreshStatsIfPresent();
+    document.getElementById("charStats").innerHTML=
+      `ATQ ${GameCore.atkTotal()} • DEF ${GameCore.defTotal()} • Crit ${GameCore.critTotal()}% • MF ${GameCore.mfTotal()}%`;
+    document.getElementById("logBox").innerHTML=GameCore.logsHTML();
   }
 
-  // Init
   Loot.renderInventory();
   updateUI();
-
-  // Fermer le menu contextuel au clic extérieur
-  document.addEventListener("click", (e)=>{
-    const m = document.getElementById("ctxMenu");
-    if(!m) return;
-    // si on clique dans le menu, on ne le ferme pas
-    if (e.target.closest("#ctxMenu")) return;
-    m.hidden = true;
-  });
 </script>
 </body>
 </html>
