@@ -3,18 +3,28 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Idle ARPG v6.0 FR</title>
+  <title>Idle ARPG v7 — Accueil</title>
   <link rel="stylesheet" href="css/style.css"/>
 </head>
 <body class="bg">
 
-<!-- Intro -->
+<header class="topbar">
+  <h1>Idle ARPG — Accueil</h1>
+  <nav>
+    <a href="index.html" class="active">Création</a>
+    <a href="game.html">Combat</a>
+    <a href="inventory.html">Inventaire</a>
+    <a href="shop.html">Campement</a>
+    <a href="journal.html">Journal</a>
+    <a href="ladder.html">Classement</a>
+  </nav>
+</header>
+
 <div id="intro">
-  <h1 class="introTitle">Idle ARPG v6.0 FR</h1>
+  <h1 class="introTitle">Idle ARPG v7</h1>
   <p class="introPhrase">Les Enfers s’ouvrent à nouveau…</p>
 </div>
 
-<!-- Création du perso -->
 <main id="createPanel" class="panel" hidden>
   <h2>Création du personnage</h2>
   <form id="createForm" class="grid">
@@ -32,24 +42,19 @@
     </label>
     <button type="submit" class="btn primary">Commencer l’aventure</button>
   </form>
+  <div class="hint small">Astuce : si vous aviez un ancien perso bugué, utilisez le bouton « Réinitialiser » ci-dessous.</div>
+  <button id="resetBtn" class="btn danger">Réinitialiser la sauvegarde</button>
 </main>
 
 <script src="js/core.js"></script>
 <script>
-  // Charger la sauvegarde
   GameCore.load();
-
-  // Si un perso existe déjà → aller directement au jeu
   if(GameCore.state.created){
     location.href="game.html";
   } else {
-    // Affiche la création après l’intro
-    setTimeout(()=> {
-      document.getElementById("createPanel").hidden=false;
-    }, 2000);
+    setTimeout(()=> document.getElementById("createPanel").hidden=false, 900);
   }
 
-  // Création du perso
   document.getElementById("createForm").addEventListener("submit", e=>{
     e.preventDefault();
     GameCore.newGame(
@@ -58,6 +63,8 @@
     );
     location.href="game.html";
   });
+
+  document.getElementById("resetBtn").onclick = ()=> GameCore.reset(true);
 </script>
 </body>
 </html>
