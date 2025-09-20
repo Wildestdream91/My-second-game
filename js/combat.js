@@ -144,12 +144,10 @@ const Combat = {
     GameCore.addGold(5);
     GameCore.log(`🏆 ${this.enemy.name} est vaincu ! +20 XP, +5 or`);
 
-    // Affiche overlay seulement si c’est un vrai boss
+    // Marquer boss vaincu mais SANS pop-up
     if(this.enemy.boss && ["Andariel","Duriel","Méphisto","Diablo","Baal"].includes(this.enemy.name)){
       s.bossesDefeated[this.enemy.name]=true;
-      document.getElementById("bossVictoryTitle").textContent=`${this.enemy.name} est vaincu !`;
-      document.getElementById("bossVictoryMsg").textContent=`L’acte suivant est débloqué !`;
-      document.getElementById("bossVictory").hidden=false;
+      GameCore.log(`🔥 ${this.enemy.name} est tombé ! L’acte suivant est maintenant débloqué.`);
     }
 
     this.enemy=null;
