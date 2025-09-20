@@ -83,5 +83,39 @@
 <script src="js/core.js"></script>
 <script src="js/loot.js"></script>
 <script src="js/combat.js"></script>
+<script>
+  // S’assure que le joueur a un perso
+  GameCore.ensureGameOrRedirect("index.html");
+
+  // Rendu des infos joueur
+  function renderPlayer(){
+    const s=GameCore.state;
+    document.getElementById("pName").textContent=s.name;
+    document.getElementById("pLvl").textContent=s.level;
+    document.getElementById("pClass").textContent=s.cls;
+    document.getElementById("pStr").textContent=s.str;
+    document.getElementById("pDex").textContent=s.dex;
+    document.getElementById("pVit").textContent=s.vit;
+    document.getElementById("pEne").textContent=s.ene;
+    document.getElementById("pGold").textContent=s.gold;
+    document.getElementById("barHpFill").style.width=(s.hp/s.hpMax*100)+"%";
+    document.getElementById("barHpText").textContent=`HP ${s.hp}/${s.hpMax}`;
+    document.getElementById("barManaFill").style.width=(s.mana/s.manaMax*100)+"%";
+    document.getElementById("barManaText").textContent=`Mana ${s.mana}/${s.manaMax}`;
+    document.getElementById("barXpFill").style.width=(s.xp/s.xpToNext*100)+"%";
+    document.getElementById("barXpText").textContent=`XP ${s.xp}/${s.xpToNext}`;
+    document.getElementById("logBox").innerHTML=GameCore.logsHTML();
+    Combat.renderActMap();
+  }
+
+  // Init combat
+  Combat.initUI(renderPlayer);
+
+  // Fermer overlay boss
+  document.getElementById("bossVictoryBtn").addEventListener("click", ()=>{
+    document.getElementById("bossVictory").hidden=true;
+    renderPlayer();
+  });
+</script>
 </body>
 </html>
