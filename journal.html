@@ -3,12 +3,13 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Journal — Idle ARPG v6.0 FR</title>
+  <title>Idle ARPG v7 — Journal</title>
   <link rel="stylesheet" href="css/style.css"/>
 </head>
 <body class="bg">
+
 <header class="topbar">
-  <h1>Journal</h1>
+  <h1>Idle ARPG — Journal</h1>
   <nav>
     <a href="index.html">Création</a>
     <a href="game.html">Combat</a>
@@ -20,9 +21,14 @@
 </header>
 
 <main class="panel">
-  <div id="logBox" class="logBox"></div>
+  <h3>Historique</h3>
+  <div id="logBox" class="logBox tall"></div>
 </main>
 
 <script src="js/core.js"></script>
+<script>
+  GameCore.ensureGameOrRedirect?.("index.html");
+  document.getElementById("logBox").innerHTML = GameCore.logsHTML();
+</script>
 </body>
 </html>
