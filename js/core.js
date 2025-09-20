@@ -1,5 +1,5 @@
 /* ==========================================
-   Idle ARPG v7.1 FR - core.js
+   Idle ARPG v7.2 FR - core.js
    Gestion joueur, XP, stats, persistance
    ========================================== */
 
@@ -14,7 +14,7 @@ const GameCore = {
     st.cls = cls;
     st.level = 1;
     st.xp = 0;
-    st.gold = 100;
+    st.gold = 0;
 
     // Attributs de base
     st.str = 5; st.dex = 5; st.vit = 5; st.ene = 5;
@@ -84,6 +84,13 @@ const GameCore = {
       this.log(`🎉 Niveau ${this.state.level} atteint !`);
       this.recalcVitals();
     }
+    this.save();
+  },
+
+  // ✅ Compatibilité combat.js
+  addXP(amount){ this.gainXP(amount); },
+  addGold(amount){
+    this.state.gold += Math.max(0, Math.floor(amount));
     this.save();
   },
 
