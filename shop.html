@@ -3,30 +3,31 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Campement — Boutique</title>
+  <title>Campement — Boutique PNJ</title>
   <link rel="stylesheet" href="css/style.css"/>
 </head>
 <body class="bg">
 <header class="topbar">
-  <h1>Campement — Boutique PNJ</h1>
+  <h1>Campement — Boutique</h1>
   <nav>
     <a href="index.html">Création</a>
     <a href="game.html">Combat</a>
     <a href="inventory.html">Inventaire</a>
     <a href="shop.html" class="active">Campement</a>
     <a href="journal.html">Journal</a>
+    <a href="ladder.html">Classement</a>
   </nav>
 </header>
 
 <main class="panel">
   <h3>Marchand</h3>
-  <p>Bienvenue, voyageur. Mon stock se renouvelle chaque jour.</p>
+  <p>Stock journalier — Potions de soin : 20 or (stock 5/jour)</p>
   <div class="shopGrid">
     <div class="shopItem">
       <div class="emoji">🧪</div>
       <div class="name">Potion de soin (+35% HP)</div>
-      <div>Prix: <b>20 or</b></div>
-      <div>Stock quotidien: <span id="potionLeft">5</span></div>
+      <div>Prix : <b>20 or</b></div>
+      <div>Stock quotidien : <span id="potionLeft">5</span></div>
       <button id="buyPotion" class="btn">Acheter</button>
     </div>
   </div>
@@ -34,25 +35,5 @@
 
 <script src="js/core.js"></script>
 <script src="js/loot.js"></script>
-<script>
-  GameCore.ensureGameOrRedirect('index.html');
-  const s = GameCore.state;
-  if(!s.shop){ s.shop = { lastReset: 0, potionsBought:0 }; GameCore.save(); }
-  function render(){
-    document.getElementById('potionLeft').textContent = Math.max(0, 5 - (GameCore.state.shop?.potionsBought||0));
-  }
-  document.getElementById('buyPotion').onclick = ()=>{
-    const left = 5 - (GameCore.state.shop?.potionsBought||0);
-    if(left<=0){ alert("Rupture de stock pour aujourd'hui !"); return; }
-    if(GameCore.state.gold < 20){ alert("Pas assez d'or !"); return; }
-    const ok = Loot.addToBag(Loot.makePotion());
-    if(!ok){ alert("Inventaire plein !"); return; }
-    GameCore.state.gold -= 20;
-    GameCore.state.shop.potionsBought = (GameCore.state.shop.potionsBought||0)+1;
-    GameCore.addLog("Achat: Potion de soin (20 or).");
-    GameCore.save(); render();
-  };
-  render();
-</script>
 </body>
 </html>
