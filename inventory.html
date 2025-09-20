@@ -3,12 +3,13 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Inventaire — Idle ARPG v6.0 FR</title>
+  <title>Idle ARPG v7 — Inventaire</title>
   <link rel="stylesheet" href="css/style.css"/>
 </head>
 <body class="bg">
+
 <header class="topbar">
-  <h1>Inventaire</h1>
+  <h1>Idle ARPG — Inventaire</h1>
   <nav>
     <a href="index.html">Création</a>
     <a href="game.html">Combat</a>
@@ -23,37 +24,64 @@
   <section class="panel">
     <h3>Équipement</h3>
     <div class="equipBoard">
-      <div class="slotE head equipSlot" data-slot="head"><span id="slotHead">—</span></div>
-      <div class="slotE amulet equipSlot" data-slot="amulet"><span id="slotAmulet">—</span></div>
-      <div class="slotE weapon equipSlot" data-slot="weapon"><span id="slotWeapon">—</span></div>
-      <div class="slotE chest equipSlot" data-slot="chest"><span id="slotChest">—</span></div>
-      <div class="slotE shield equipSlot" data-slot="shield"><span id="slotShield">—</span></div>
-      <div class="slotE ring equipSlot" data-slot="ring"><span id="slotRing">—</span></div>
+      <div class="equipSlot" id="slotHead" title="Tête">—</div>
+      <div class="equipSlot" id="slotAmulet" title="Amulette">—</div>
+      <div class="equipSlot big" id="slotWeapon" title="Arme">—</div>
+      <div class="equipSlot big" id="slotChest" title="Torse">—</div>
+      <div class="equipSlot" id="slotShield" title="Bouclier">—</div>
+      <div class="equipSlot" id="slotRing" title="Anneau">—</div>
     </div>
-    <div id="charStats"></div>
-  </section>
 
-  <section class="panel">
-    <h3>Sac (40 cases)</h3>
+    <h3>Inventaire</h3>
     <div id="inventoryGrid" class="invGrid"></div>
-    <div class="row">
-      <button id="sellTrash" class="btn">Vendre communs</button>
-      <button id="exportBtn" class="btn">Exporter sauvegarde</button>
-      <label class="btn">Importer sauvegarde
-        <input id="importFile" type="file" accept="application/json" style="display:none">
-      </label>
-    </div>
+    <div id="ctxMenu" class="ctxMenu" hidden></div>
   </section>
 
-  <aside class="panel log">
+  <aside class="panel">
+    <h3>Caractéristiques</h3>
+    <div id="charStats" class="statsBox">—</div>
+    <div class="statSpend">
+      <p>Points d’attribut : <b id="ptsAttr">0</b></p>
+      <div class="btnRow">
+        <button class="btn" onclick="spend('str')">+ FOR</button>
+        <button class="btn" onclick="spend('dex')">+ DEX</button>
+        <button class="btn" onclick="spend('vit')">+ VIT</button>
+        <button class="btn" onclick="spend('ene')">+ ÉNE</button>
+      </div>
+    </div>
     <h3>Journal</h3>
     <div id="logBox" class="logBox"></div>
   </aside>
 </main>
 
-<div id="ctxMenu" class="ctxMenu" hidden></div>
-
 <script src="js/core.js"></script>
 <script src="js/loot.js"></script>
+<script>
+  GameCore.ensureGameOrRedirect?.("index.html");
+
+  function spend(stat){
+    GameCore.spendStatPoint(stat);
+    updateUI();
+    Loot.renderInventory();
+  }
+
+  function updateUI(){
+    document.getElementById("ptsAttr").textContent = GameCore.state.statPts;
+    GameCore.uiRefreshStatsIfPresent?.();
+  }
+
+  // Init
+  Loot.renderInventory();
+  updateUI();
+
+  // Fermer le menu contextuel au clic extérieur
+  document.addEventListener("click", (e)=>{
+    const m = document.getElementById("ctxMenu");
+    if(!m) return;
+    // si on clique dans le menu, on ne le ferme pas
+    if (e.target.closest("#ctxMenu")) return;
+    m.hidden = true;
+  });
+</script>
 </body>
 </html>
