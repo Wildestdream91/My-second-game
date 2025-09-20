@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Classement — Idle ARPG v6.0 FR</title>
+  <link rel="stylesheet" href="css/style.css"/>
+</head>
+<body class="bg">
+<header class="topbar">
+  <h1>Classement</h1>
+  <nav>
+    <a href="index.html">Création</a>
+    <a href="game.html">Combat</a>
+    <a href="inventory.html">Inventaire</a>
+    <a href="shop.html">Campement</a>
+    <a href="journal.html">Journal</a>
+    <a href="ladder.html" class="active">Classement</a>
+  </nav>
+</header>
+
+<main class="panel">
+  <p>Classement local basé sur l’XP totale.</p>
+  <table class="ladder">
+    <thead><tr><th>#</th><th>Pseudo</th><th>Niveau</th><th>XP total</th><th>Score</th></tr></thead>
+    <tbody id="ladderBody"></tbody>
+  </table>
+</main>
+
+<script src="js/core.js"></script>
+</body>
+</html>
