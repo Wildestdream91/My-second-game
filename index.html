@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Idle ARPG v7 — Accueil</title>
+  <title>Idle ARPG — Accueil</title>
   <link rel="stylesheet" href="css/style.css"/>
 </head>
 <body class="bg">
 
 <header class="topbar">
-  <h1>Idle ARPG — Accueil</h1>
+  <h1>Idle ARPG</h1>
   <nav>
     <a href="index.html" class="active">Création</a>
     <a href="game.html">Combat</a>
@@ -21,11 +21,11 @@
 </header>
 
 <div id="intro">
-  <h1 class="introTitle">Idle ARPG v7</h1>
-  <p class="introPhrase">Les Enfers s’ouvrent à nouveau…</p>
+  <h1 class="introTitle">Les Enfers s’ouvrent à nouveau…</h1>
+  <p class="introPhrase">Créez votre héros et partez affronter les hordes.</p>
 </div>
 
-<main id="createPanel" class="panel" hidden>
+<main id="createPanel" class="panel">
   <h2>Création du personnage</h2>
   <form id="createForm" class="grid">
     <label>Pseudo
@@ -40,21 +40,16 @@
         <option value="Amazone">Amazone</option>
       </select>
     </label>
-    <button type="submit" class="btn primary">Commencer l’aventure</button>
+    <button type="submit" class="btn primary">Commencer</button>
   </form>
-  <div class="hint small">Astuce : si vous aviez un ancien perso bugué, utilisez le bouton « Réinitialiser » ci-dessous.</div>
+  <div class="hint small">Besoin de repartir de zéro ?</div>
   <button id="resetBtn" class="btn danger">Réinitialiser la sauvegarde</button>
 </main>
 
 <script src="js/core.js"></script>
 <script>
   GameCore.load();
-  if(GameCore.state.created){
-    location.href="game.html";
-  } else {
-    setTimeout(()=> document.getElementById("createPanel").hidden=false, 900);
-  }
-
+  if(GameCore.state.created){ location.href="game.html"; }
   document.getElementById("createForm").addEventListener("submit", e=>{
     e.preventDefault();
     GameCore.newGame(
@@ -63,8 +58,7 @@
     );
     location.href="game.html";
   });
-
-  document.getElementById("resetBtn").onclick = ()=> GameCore.reset(true);
+  document.getElementById("resetBtn").onclick=()=>GameCore.reset(true);
 </script>
 </body>
 </html>
