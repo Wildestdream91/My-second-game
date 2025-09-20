@@ -3,12 +3,13 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Classement — Idle ARPG v6.0 FR</title>
+  <title>Idle ARPG v7 — Classement</title>
   <link rel="stylesheet" href="css/style.css"/>
 </head>
 <body class="bg">
+
 <header class="topbar">
-  <h1>Classement</h1>
+  <h1>Idle ARPG — Classement</h1>
   <nav>
     <a href="index.html">Création</a>
     <a href="game.html">Combat</a>
@@ -20,13 +21,27 @@
 </header>
 
 <main class="panel">
-  <p>Classement local basé sur l’XP totale.</p>
-  <table class="ladder">
-    <thead><tr><th>#</th><th>Pseudo</th><th>Niveau</th><th>XP total</th><th>Score</th></tr></thead>
+  <h3>Échelle locale</h3>
+  <table class="table">
+    <thead>
+      <tr><th>#</th><th>Nom</th><th>Niveau</th><th>XP courant</th></tr>
+    </thead>
     <tbody id="ladderBody"></tbody>
   </table>
 </main>
 
 <script src="js/core.js"></script>
+<script>
+  GameCore.ensureGameOrRedirect?.("index.html");
+  const body = document.getElementById("ladderBody");
+  const rows = GameCore.getLadder().map((e,i)=>`
+    <tr>
+      <td>${i+1}</td>
+      <td>${e.name}</td>
+      <td>${e.level}</td>
+      <td>${e.xp}</td>
+    </tr>`).join("");
+  body.innerHTML = rows || `<tr><td colspan="4">Aucun score enregistré pour l’instant.</td></tr>`;
+</script>
 </body>
 </html>
