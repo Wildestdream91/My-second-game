@@ -3,108 +3,85 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Idle ARPG v5.3 — Combat</title>
+  <title>Idle ARPG v6.0 FR — Combat</title>
   <link rel="stylesheet" href="css/style.css"/>
 </head>
 <body class="bg">
 <header class="topbar">
-  <h1>Idle ARPG v5.3 — Combat</h1>
+  <h1>Idle ARPG — Combat</h1>
   <nav>
     <a href="index.html">Création</a>
     <a href="game.html" class="active">Combat</a>
     <a href="inventory.html">Inventaire</a>
     <a href="shop.html">Campement</a>
     <a href="journal.html">Journal</a>
+    <a href="ladder.html">Classement</a>
   </nav>
 </header>
 
+<!-- Mini-carte des actes -->
+<div id="actMap"></div>
+
 <main class="columns">
   <section class="panel">
+    <!-- Infos héros -->
     <div class="heroStats">
-      <div class="row-split">
-        <div>
-          <div><b id="pName">—</b> (Lv <span id="pLvl">1</span>) — <span id="pClass"></span></div>
-          <div>FOR <span id="pStr">0</span> — DEX <span id="pDex">0</span> — VIT <span id="pVit">0</span> — ÉNE <span id="pEne">0</span></div>
-          <div>ATQ <span id="pAtk">0</span> — DEF <span id="pDef">0</span> — Crit <span id="pCrit">0</span>% | Or: <span id="pGold">0</span></div>
-        </div>
-      </div>
-
-      <!-- Bars à la Diablo -->
+      <div><b id="pName">—</b> (Lv <span id="pLvl">1</span>) — <span id="pClass"></span></div>
+      <div>FOR <span id="pStr">0</span> — DEX <span id="pDex">0</span> — VIT <span id="pVit">0</span> — ÉNE <span id="pEne">0</span></div>
+      <div>ATQ <span id="pAtk">0</span> — DEF <span id="pDef">0</span> — Crit <span id="pCrit">0</span>% | MF <span id="pMF">0</span>% | Or <span id="pGold">0</span></div>
       <div class="bars">
-        <div class="bar hp">
-          <div class="bar-fill" id="barHpFill"></div>
-          <div class="bar-text" id="barHpText">HP 0/0</div>
-        </div>
-        <div class="bar mana">
-          <div class="bar-fill" id="barManaFill"></div>
-          <div class="bar-text" id="barManaText">Mana 0/0</div>
-        </div>
-        <div class="bar xp">
-          <div class="bar-fill" id="barXpFill"></div>
-          <div class="bar-text" id="barXpText">XP 0/0</div>
-        </div>
+        <div class="bar hp"><div class="bar-fill" id="barHpFill"></div><div class="bar-text" id="barHpText">HP 0/0</div></div>
+        <div class="bar mana"><div class="bar-fill" id="barManaFill"></div><div class="bar-text" id="barManaText">Mana 0/0</div></div>
+        <div class="bar xp"><div class="bar-fill" id="barXpFill"></div><div class="bar-text" id="barXpText">XP 0/0</div></div>
       </div>
     </div>
 
+    <!-- Choix de zone -->
     <div class="zoneRow">
-      <label>Acte & Zone :
+      <label>Zone :
         <select id="zoneSelect"></select>
       </label>
       <button id="newEncounter" class="btn">Nouvelle rencontre</button>
       <label class="switch">
         <input id="autoToggle" type="checkbox"/>
-        <span>Auto-combat sécurisé (idle)</span>
+        <span>Auto-combat (idle)</span>
       </label>
     </div>
 
+    <!-- Carte ennemi -->
     <div class="enemyCard" id="enemyCard" hidden>
       <div><b id="eName">—</b> (Lv <span id="eLvl">1</span>) — <span id="eType">—</span></div>
       <div>HP: <span id="eHP">0</span>/<span id="eHPmax">0</span> | DEF: <span id="eDef">—</span> | Dégâts: <span id="eDice">—</span></div>
       <div class="actions">
-        <button id="attackBtn" class="btn primary">⚔️ Attaquer (clic)</button>
+        <button id="attackBtn" class="btn primary">⚔️ Attaquer</button>
         <button id="fleeBtn" class="btn">🏃 Fuir</button>
       </div>
     </div>
-
     <progress id="eHpBar" value="0" max="1"></progress>
+
+    <div id="actLore" class="lore"></div>
   </section>
 
+  <!-- Journal -->
   <aside class="panel log">
     <h3>Journal</h3>
     <div id="logBox" class="logBox"></div>
   </aside>
 </main>
 
-<footer class="footnote">Actes I–V avec déblocage auto (II=15, III=27, IV=35, V=40). L’auto-combat s’arrête si HP &lt; 25%.</footer>
+<!-- Overlay victoire boss -->
+<div id="bossVictory" class="bossOverlay" hidden>
+  <div class="bossBox">
+    <h2 id="bossVictoryTitle"></h2>
+    <p id="bossVictoryMsg"></p>
+    <button id="bossVictoryBtn" class="btn primary">Continuer</button>
+  </div>
+</div>
+
+<footer class="footnote">Boss requis pour progresser à l’acte suivant.</footer>
 
 <script src="js/core.js"></script>
 <script src="js/loot.js"></script>
 <script src="js/combat.js"></script>
-<script>
-  GameCore.ensureGameOrRedirect('index.html');
-  GameCore.applyOfflineProgress(Combat.offlineSim);
-
-  function populateZones(){
-    const sel = document.getElementById('zoneSelect');
-    const access = Combat.accessibleActs(GameCore.state.level);
-    sel.innerHTML = '';
-    for(const group of Combat.zoneGroups()){
-      const og = document.createElement('optgroup');
-      og.label = group.label + (access[group.act] ? '' : ` (🔒 niv ${Combat.requiredLevel(group.act)})`);
-      for(const z of group.zones){
-        const opt = document.createElement('option');
-        opt.value = z.key;
-        opt.textContent = z.name;
-        opt.disabled = !access[group.act];
-        sel.appendChild(opt);
-      }
-      sel.insertBefore(og, sel.lastChild);
-    }
-    sel.value = GameCore.state.zone || Combat.defaultZone();
-  }
-
-  populateZones();
-  Combat.initUI(populateZones);
-</script>
 </body>
 </html>
