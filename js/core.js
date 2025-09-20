@@ -3,7 +3,7 @@
    ========================================== */
 
 // ----- Réglage XP global -----
-const XP_RATE = 2.0; // Multiplie tous les gains d’XP par 2
+const XP_RATE = 10.0; // Multiplie tous les gains d’XP par 2
 
 const GameCore={
   state:{},
