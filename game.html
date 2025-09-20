@@ -54,6 +54,14 @@
       </label>
     </div>
 
+    <!-- Runs XP -->
+    <div class="panel" style="margin-top:10px">
+      <h3>Runs XP (style D2)</h3>
+      <div id="runsButtons" class="btnRow"></div>
+      <div id="runsBox" class="statsBox" style="margin-top:8px">—</div>
+      <button id="runsStop" class="btn danger" style="margin-top:8px" disabled>Stopper le run</button>
+    </div>
+
     <div class="enemyCard" id="enemyCard" hidden>
       <div><b id="eName">—</b> (Lv <span id="eLvl">1</span>)</div>
       <div>HP: <span id="eHP">0</span>/<span id="eHPmax">0</span> | DEF: <span id="eDef">—</span> | Dégâts: <span id="eDice">—</span></div>
@@ -78,6 +86,7 @@
 <script src="js/core.js"></script>
 <script src="js/loot.js"></script>
 <script src="js/combat.js"></script>
+<script src="js/runs.js"></script>
 <script>
   GameCore.ensureGameOrRedirect("index.html");
 
@@ -102,6 +111,7 @@
     };
   })();
 
+  Runs.initUI();
   setInterval(()=>GameCore.uiRefreshStatsIfPresent(),600);
 </script>
 </body>
