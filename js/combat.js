@@ -1,6 +1,6 @@
 /* ================================
-   Idle ARPG v6.1 FR - combat.js
-   Gestion des zones, monstres, combats, boss
+   Idle ARPG v7.0 FR - combat.js
+   Refonte combats + actes/zones
    ================================ */
 
 const Combat = {
@@ -8,60 +8,43 @@ const Combat = {
   auto: false,
   timer: null,
 
-  // === Zones et monstres par acte ===
+  // === Acts & Zones (3 zones + 1 boss par acte) ===
   groups(){
     return [
       { act:1, label:"Acte I — Plaine de Sang", zones:[
-        {key:"i1", name:"Campement des Rogues", monsters:[
-          "Chaman déchu","Déchu","Squelette","Zombie","Corbeau","Quill Rat","Sorcier noir",
-          "Chauve-souris","Araignée des cavernes","Sanglier sauvage","Zombie affamé","Squelette mage",
-          "Crapaud venimeux","Chaman squelette","Vermine","Corbeau noir","Chien enragé","Crapaud pesteux",
-          "Spectre faible","Sorcier du sang"
-        ]},
+        {key:"i1", name:"Campement des Rogues", monsters:["Déchu","Chaman déchu","Quill Rat","Zombie"]},
+        {key:"i2", name:"Plaine Sanglante", monsters:["Squelette","Corbeau","Sorcier noir","Araignée des cavernes"]},
+        {key:"i3", name:"Catacombes", monsters:["Chauve-souris","Crapaud venimeux","Spectre","Squelette mage"]},
         {key:"iBoss", name:"Repaire d’Andariel", monsters:["Andariel"], boss:true}
       ]},
       { act:2, label:"Acte II — Désert de Lut Gholein", zones:[
-        {key:"ii1", name:"Oasis de Far Oasis", monsters:[
-          "Squelette du désert","Scarabée électrique","Scarabée empoisonné","Ver des sables","Guerrier squelette",
-          "Zombie desséché","Vautour","Harpie","Momie","Momie desséchée","Chien de sable","Démon mineur",
-          "Spectre du désert","Sorcier de sable","Chacal démoniaque","Guerrier momifié","Serpent","Momie empoisonnée",
-          "Chien corrupteur","Sorcier des dunes"
-        ]},
+        {key:"ii1", name:"Oasis de Far Oasis", monsters:["Ver des sables","Scarabée électrique","Momie desséchée"]},
+        {key:"ii2", name:"Égouts de Lut Gholein", monsters:["Squelette du désert","Zombie desséché","Spectre du désert"]},
+        {key:"ii3", name:"Canyon des Magi", monsters:["Guerrier momifié","Serpent","Sorcier de sable"]},
         {key:"iiBoss", name:"Tombe de Tal Rasha (Duriel)", monsters:["Duriel"], boss:true}
       ]},
       { act:3, label:"Acte III — Jungle de Kurast", zones:[
-        {key:"iii1", name:"Jungle des araignées", monsters:[
-          "Araignée venimeuse","Fétiche","Sorcier fétiche","Grenouille empoisonnée","Guerrier zombi",
-          "Petit démon","Grand démon","Spectre","Vampire","Sorcier vampire","Singe démoniaque","Homme-bête",
-          "Chauve-souris géante","Sorcier araignée","Guerrier possédé","Crapaud maudit","Esprit corrompu",
-          "Sorcière des marais","Guerrier des marais","Serpent venimeux"
-        ]},
-        {key:"iiiBoss", name:"Temple de Méphisto", monsters:["Méphisto"], boss:true}
+        {key:"iii1", name:"Jungle des araignées", monsters:["Araignée venimeuse","Fétiche","Grenouille empoisonnée"]},
+        {key:"iii2", name:"Bas-Kurast", monsters:["Petit démon","Grand démon","Vampire"]},
+        {key:"iii3", name:"Temple de Kurast", monsters:["Sorcier vampire","Homme-bête","Chauve-souris géante"]},
+        {key:"iiiBoss", name:"Sanctuaire de Méphisto", monsters:["Méphisto"], boss:true}
       ]},
       { act:4, label:"Acte IV — Enfers", zones:[
-        {key:"iv1", name:"Rivière de Flammes", monsters:[
-          "Chevalier de l’enfer","Chevalier de l’effroi","Démon majeur","Spectre ardent","Vampire de l’enfer",
-          "Serpent infernal","Succube","Guerrier démoniaque","Balrog mineur","Balrog majeur","Sorcier démoniaque",
-          "Aile de chauve-souris","Zombie infernal","Chien de l’enfer","Esprit du feu","Spectre corrompu",
-          "Diablotin","Démon araignée","Spectre rouge","Guerrier corrompu"
-        ]},
-        {key:"ivBoss", name:"Sanctuaire du Chaos (Diablo)", monsters:["Diablo"], boss:true}
+        {key:"iv1", name:"Plaines du Désespoir", monsters:["Chevalier de l’enfer","Spectre ardent","Succube"]},
+        {key:"iv2", name:"Rivière de Flammes", monsters:["Balrog mineur","Chien de l’enfer","Vampire de l’enfer"]},
+        {key:"iv3", name:"Sanctuaire du Chaos", monsters:["Démon majeur","Spectre corrompu","Diablotin"]},
+        {key:"ivBoss", name:"Affrontement avec Diablo", monsters:["Diablo"], boss:true}
       ]},
       { act:5, label:"Acte V — Mont Arreat", zones:[
-        {key:"v1", name:"Plateau des Hurlants", monsters:[
-          "Barbare corrompu","Sorcier corrompu","Loup corrompu","Chaman corrompu","Archer corrompu",
-          "Guerrier squelette","Zombie gelé","Spectre de glace","Sorcier de glace","Chien gelé",
-          "Géant du froid","Succube du givre","Esprit glacial","Sorcière corrompue","Corbeau de glace",
-          "Balrog gelé","Spectre gelé","Chien démoniaque","Démon du froid","Guerrier corrompu"
-        ]},
-        {key:"vBoss", name:"Salle du Trône (Baal)", monsters:["Baal"], boss:true}
+        {key:"v1", name:"Plateau des Hurlants", monsters:["Barbare corrompu","Sorcier corrompu","Zombie gelé"]},
+        {key:"v2", name:"Glacier Arreat", monsters:["Spectre de glace","Chien gelé","Succube du givre"]},
+        {key:"v3", name:"Salle des Anciens", monsters:["Balrog gelé","Esprit glacial","Guerrier corrompu"]},
+        {key:"vBoss", name:"Baal, Seigneur de la Destruction", monsters:["Baal"], boss:true}
       ]}
     ];
   },
 
-  defaultZone(){ return "i1"; },
-
-  // Conditions de déblocage des actes
+  // Conditions de déblocage (style D2 simplifié)
   lockInfo(state){
     return {
       req:{2:12,3:20,4:30,5:40},
@@ -75,127 +58,244 @@ const Combat = {
     };
   },
 
-  // Vérifie si zone accessible
-  zoneAvailable(state, zoneKey){
-    const group=this.groups().find(g=>g.zones.find(z=>z.key===zoneKey));
-    if(!group) return false;
-    const z=group.zones.find(z=>z.key===zoneKey);
-    if(!z) return false;
-    return this.lockInfo(state).access[group.act];
+  /* ---------- Utilitaires ---------- */
+  findZone(zoneKey){
+    for(const g of this.groups()){
+      const z = g.zones.find(z=>z.key===zoneKey);
+      if(z) return {group:g, zone:z};
+    }
+    return null;
+  },
+  actOfZone(zoneKey){
+    const f = this.findZone(zoneKey);
+    return f ? f.group.act : 1;
   },
 
-  // Nouvelle rencontre
+  /* ---------- Rencontre ---------- */
   newEncounter(zoneKey){
-    const group=this.groups().find(g=>g.zones.find(z=>z.key===zoneKey));
-    const z=group.zones.find(z=>z.key===zoneKey);
-    const name=z.monsters[Math.floor(Math.random()*z.monsters.length)];
-    this.enemy={
+    const f = this.findZone(zoneKey);
+    if(!f) return;
+    const {group, zone} = f;
+
+    const name = zone.monsters[Math.floor(Math.random()*zone.monsters.length)];
+    const act = group.act;
+
+    // Échelle de stats par acte
+    const eLvl = act*5 + Math.floor(Math.random()*5);
+    const eHPmax = 35 + act*28 + Math.floor(Math.random()*10);
+    const eDef = 4*act + Math.floor(Math.random()*3);
+    const diceFaces = 6 + act*4; // dégâts ennemis bruts
+
+    this.enemy = {
       name,
-      level: group.act*5+Math.floor(Math.random()*5),
-      hp: 30+group.act*20,
-      hpMax: 30+group.act*20,
-      def: 5*group.act,
-      dice:[1,6+group.act*3],
-      boss:z.boss || ["Andariel","Duriel","Méphisto","Diablo","Baal"].includes(name)
+      level: eLvl,
+      hp: eHPmax,
+      hpMax: eHPmax,
+      def: eDef,
+      dice: [1, diceFaces],
+      boss: zone.boss || ["Andariel","Duriel","Méphisto","Diablo","Baal"].includes(name),
+      act
     };
-    document.getElementById("enemyCard").hidden=false;
-    document.getElementById("eName").textContent=this.enemy.name;
-    document.getElementById("eLvl").textContent=this.enemy.level;
-    document.getElementById("eHP").textContent=this.enemy.hp;
-    document.getElementById("eHPmax").textContent=this.enemy.hpMax;
-    document.getElementById("eDef").textContent=this.enemy.def;
-    document.getElementById("eDice").textContent=`${this.enemy.dice[0]}d${this.enemy.dice[1]}`;
-    document.getElementById("eHpBar").max=this.enemy.hpMax;
-    document.getElementById("eHpBar").value=this.enemy.hp;
-    document.getElementById("enemyCard").classList.toggle("bossFight",this.enemy.boss);
-    GameCore.log(`⚔️ Un ${this.enemy.name} apparaît !`);
-  },
 
-  // Attaque
-  attack(){
-    if(!this.enemy) return;
-    const s=GameCore.state;
-    const playerDmg=this.rollDice(1,6+s.str);
-    const enemyDmg=this.rollDice(this.enemy.dice[0],this.enemy.dice[1]) - s.def/5;
-    this.enemy.hp-=playerDmg;
-    if(this.enemy.hp<0) this.enemy.hp=0;
-    s.hp-=Math.max(1,Math.floor(enemyDmg));
-    if(s.hp<0) s.hp=0;
-    document.getElementById("eHP").textContent=this.enemy.hp;
-    document.getElementById("eHpBar").value=this.enemy.hp;
-    document.getElementById("barHpFill").style.width=(s.hp/s.hpMax*100)+"%";
-    document.getElementById("barHpText").textContent=`HP ${s.hp}/${s.hpMax}`;
-    GameCore.log(`Vous infligez ${playerDmg} dégâts. L’ennemi inflige ${Math.max(0,Math.floor(enemyDmg))} dégâts.`);
-    if(this.enemy.hp<=0){
-      this.victory();
-    } else if(s.hp<=0){
-      GameCore.log("☠️ Vous êtes mort ! Retour au campement.");
-      s.hp=s.hpMax; s.mana=s.manaMax; s.gold=Math.max(0,s.gold-20);
-      this.enemy=null;
-      document.getElementById("enemyCard").hidden=true;
-    }
+    // UI
+    const card = document.getElementById("enemyCard");
+    if(card) card.hidden = false;
+    this._uiEnemySync();
+    GameCore.log(`⚔️ Un ${this.enemy.name} apparaît dans ${zone.name} !`);
     GameCore.save();
   },
 
-  // Victoire
-  victory(){
-    const s=GameCore.state;
-    GameCore.addXP(20);
-    GameCore.addGold(5);
-    GameCore.log(`🏆 ${this.enemy.name} est vaincu ! +20 XP, +5 or`);
-
-    if(this.enemy.boss && ["Andariel","Duriel","Méphisto","Diablo","Baal"].includes(this.enemy.name)){
-      s.bossesDefeated[this.enemy.name]=true;
-      GameCore.log(`🔥 ${this.enemy.name} est tombé ! L’acte suivant est maintenant débloqué.`);
-    }
-
-    this.enemy=null;
-    document.getElementById("enemyCard").hidden=true;
-    GameCore.save();
+  _uiEnemySync(){
+    const e = this.enemy;
+    if(!e) return;
+    const qs = (id)=>document.getElementById(id);
+    if(qs("eName")) qs("eName").textContent = e.name;
+    if(qs("eLvl")) qs("eLvl").textContent = e.level;
+    if(qs("eHP")) qs("eHP").textContent = e.hp;
+    if(qs("eHPmax")) qs("eHPmax").textContent = e.hpMax;
+    if(qs("eDef")) qs("eDef").textContent = e.def;
+    if(qs("eDice")) qs("eDice").textContent = `${e.dice[0]}d${e.dice[1]}`;
+    if(qs("eHpBar")) { qs("eHpBar").max = e.hpMax; qs("eHpBar").value = e.hp; }
+    const ec = document.getElementById("enemyCard");
+    if(ec) ec.classList.toggle("bossFight", !!e.boss);
   },
 
+  /* ---------- Combat ---------- */
   rollDice(nb,faces){
     let sum=0;
-    for(let i=0;i<nb;i++){ sum+=1+Math.floor(Math.random()*faces); }
+    for(let i=0;i<nb;i++) sum += 1 + Math.floor(Math.random()*faces);
     return sum;
   },
 
-  // Auto-combat
-  toggleAuto(val){
-    this.auto=val;
-    if(val){ this.timer=setInterval(()=>this.attack(),2000); }
-    else { clearInterval(this.timer); }
-  },
+  attack(){
+    if(!this.enemy) return;
+    const s = GameCore.state;
+    const e = this.enemy;
 
-  // Génération de la liste des zones
-  initUI(renderPlayer){
-    const zoneSelect=document.getElementById("zoneSelect");
-    if(zoneSelect){
-      zoneSelect.innerHTML="";
-      for(const g of this.groups()){
-        for(const z of g.zones){
-          if(this.zoneAvailable(GameCore.state,z.key)){
-            const opt=document.createElement("option");
-            opt.value=z.key;
-            opt.textContent=z.name;
-            zoneSelect.appendChild(opt);
-          }
-        }
-      }
+    // --- dégâts joueur ---
+    const baseRoll = this.rollDice(1, 6);
+    const atk = GameCore.atkTotal(); // STR + bonus équipement
+    let playerDmg = baseRoll + Math.floor(atk*0.8); // base
+    // Critique (x2) selon GameCore.critTotal()
+    const critChance = GameCore.critTotal()/100;
+    const isCrit = Math.random() < critChance;
+    if(isCrit) playerDmg = Math.floor(playerDmg*2);
+
+    // Réduction par DEF ennemie (douce)
+    playerDmg = Math.max(1, playerDmg - Math.floor(e.def/6));
+    e.hp -= playerDmg;
+    if(e.hp < 0) e.hp = 0;
+
+    // --- dégâts ennemis ---
+    let enemyRaw = this.rollDice(e.dice[0], e.dice[1]) + (e.act*2);
+    // Réduction par DEF du joueur, mais minimum 1
+    const def = GameCore.defTotal();
+    const enemyDmg = Math.max(1, enemyRaw - Math.floor(def/10));
+    s.hp -= enemyDmg;
+    if(s.hp < 0) s.hp = 0;
+
+    // UI sync
+    this._uiEnemySync();
+    if(document.getElementById("barHpFill")){
+      document.getElementById("barHpFill").style.width = (s.hp/s.hpMax*100)+"%";
+      document.getElementById("barHpText").textContent = `HP ${s.hp}/${s.hpMax}`;
     }
 
-    document.getElementById("attackBtn").onclick=()=>this.attack();
-    document.getElementById("fleeBtn").onclick=()=>{
+    GameCore.log(`Vous infligez ${playerDmg}${isCrit?" (CRIT)":""} dmg. L’ennemi inflige ${enemyDmg} dmg.`);
+
+    if(e.hp <= 0){
+      this.victory();
+    } else if(s.hp <= 0){
+      GameCore.log("☠️ Vous êtes mort ! Retour au campement (-20 or).");
+      s.hp = s.hpMax; s.mana = s.manaMax; s.gold = Math.max(0, s.gold-20);
+      this.enemy = null;
+      const card = document.getElementById("enemyCard"); if(card) card.hidden = true;
+      GameCore.save();
+    } else {
+      GameCore.save();
+    }
+  },
+
+  victory(){
+    const e = this.enemy;
+    const act = e.act;
+
+    // Récompenses (scaling par acte + boss bonus)
+    const baseXP = 10 + act*7 + Math.floor(e.level/2);
+    const baseGold = 5 + act*4 + Math.floor(e.level/3);
+    const xpGain = e.boss ? Math.floor(baseXP*5) : baseXP;
+    const goldGain = e.boss ? Math.floor(baseGold*4) : baseGold;
+
+    GameCore.addXP(xpGain);
+    GameCore.addGold(goldGain);
+    GameCore.log(`🏆 ${e.name} vaincu ! +${xpGain} XP, +${goldGain} or.`);
+
+    // Progression boss → débloque acte suivant
+    if(e.boss && ["Andariel","Duriel","Méphisto","Diablo","Baal"].includes(e.name)){
+      GameCore.state.bossesDefeated[e.name] = true;
+      GameCore.log(`🔥 ${e.name} est tombé ! L’acte suivant est débloqué.`);
+    }
+
+    // Loot (si Loot.generateLoot existe)
+    try {
+      if (typeof Loot !== "undefined" && Loot.generateLoot) {
+        Loot.generateLoot(GameCore.mfTotal ? GameCore.mfTotal() : 0);
+        if (Loot.renderInventory && document.getElementById("inventoryGrid")) {
+          Loot.renderInventory();
+        }
+      }
+    } catch(err){ console.warn("Loot error:", err); }
+
+    // Fin de combat
+    this.enemy = null;
+    const card = document.getElementById("enemyCard"); if(card) card.hidden = true;
+
+    // Rafraîchit l’UI
+    if (GameCore.uiRefreshStatsIfPresent) GameCore.uiRefreshStatsIfPresent();
+    GameCore.save();
+  },
+
+  /* ---------- Auto-combat ---------- */
+  toggleAuto(val){
+    this.auto = val;
+    if(val){
+      if(this.timer) clearInterval(this.timer);
+      this.timer = setInterval(()=>this.attack(), 1700);
+      GameCore.log("🌀 Auto-combat activé.");
+    } else {
+      clearInterval(this.timer);
+      this.timer = null;
+      GameCore.log("⛔ Auto-combat désactivé.");
+    }
+    GameCore.save();
+  },
+
+  /* ---------- UI Actes & Zones ---------- */
+  populateZonesForAct(act){
+    const group = this.groups().find(g=>g.act===act);
+    const zoneSelect = document.getElementById("zoneSelect");
+    if(!group || !zoneSelect) return;
+    zoneSelect.innerHTML = "";
+    for(const z of group.zones){
+      const opt = document.createElement("option");
+      opt.value = z.key;
+      opt.textContent = z.name;
+      zoneSelect.appendChild(opt);
+    }
+  },
+
+  renderActMap(){
+    const map = document.getElementById("actMap");
+    if(!map) return;
+    map.innerHTML = "";
+    const li = this.lockInfo(GameCore.state);
+    for(const g of this.groups()){
+      const div = document.createElement("div");
+      div.className = "actIcon";
+      div.textContent = g.act;
+      if(!li.access[g.act]) div.classList.add("locked");
+      else div.classList.add("unlocked");
+      div.onclick = ()=>{
+        if(!li.access[g.act]) return;
+        this.populateZonesForAct(g.act);
+      };
+      map.appendChild(div);
+    }
+  },
+
+  /* ---------- Initialisation UI ---------- */
+  initUI(renderPlayer){
+    // Actes
+    this.renderActMap();
+    // Par défaut, affiche Acte I zones
+    this.populateZonesForAct(1);
+
+    // Boutons
+    const attackBtn = document.getElementById("attackBtn");
+    if(attackBtn) attackBtn.onclick = ()=>this.attack();
+
+    const fleeBtn = document.getElementById("fleeBtn");
+    if(fleeBtn) fleeBtn.onclick = ()=>{
       GameCore.log("🏃 Vous fuyez !");
-      this.enemy=null;
-      document.getElementById("enemyCard").hidden=true;
+      this.enemy = null;
+      const card = document.getElementById("enemyCard"); if(card) card.hidden = true;
+      GameCore.save();
     };
-    document.getElementById("newEncounter").onclick=()=>{
-      const z=document.getElementById("zoneSelect").value;
+
+    const newEnc = document.getElementById("newEncounter");
+    if(newEnc) newEnc.onclick = ()=>{
+      const z = document.getElementById("zoneSelect")?.value;
+      if(!z){ GameCore.log("Choisissez une zone."); return; }
       this.newEncounter(z);
-      renderPlayer();
+      if (typeof renderPlayer === "function") renderPlayer();
+      if (GameCore.uiRefreshStatsIfPresent) GameCore.uiRefreshStatsIfPresent();
     };
-    document.getElementById("autoToggle").onchange=(e)=>this.toggleAuto(e.target.checked);
-    renderPlayer();
+
+    const autoT = document.getElementById("autoToggle");
+    if(autoT) autoT.onchange = (e)=>this.toggleAuto(e.target.checked);
+
+    // Premier rendu joueur
+    if (typeof renderPlayer === "function") renderPlayer();
+    if (GameCore.uiRefreshStatsIfPresent) GameCore.uiRefreshStatsIfPresent();
   }
 };
