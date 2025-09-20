@@ -14,7 +14,7 @@ const GameCore = {
     st.cls = cls;
     st.level = 1;
     st.xp = 0;
-    st.gold = 0;
+    st.gold = 100;
 
     // Attributs de base
     st.str = 5; st.dex = 5; st.vit = 5; st.ene = 5;
