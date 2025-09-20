@@ -81,11 +81,10 @@ const Combat = {
     const act = group.act;
 
     // Échelle de stats par acte
-    const eLvl = act*5 + Math.floor(Math.random()*5);
-    const eHPmax = 35 + act*28 + Math.floor(Math.random()*10);
-    const eDef = 4*act + Math.floor(Math.random()*3);
-    const diceFaces = 6 + act*4; // dégâts ennemis bruts
-
+    const eLvl = act*2 + Math.floor(Math.random()*5);
+    const eHPmax = 30 + act*18 + Math.floor(Math.random()*6);
+    const eDef    = 3*act + Math.floor(Math.random()*2);
+    const diceFaces = 6 + act*3;
     this.enemy = {
       name,
       level: eLvl,
