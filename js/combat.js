@@ -12,23 +12,48 @@ const Combat = {
   groups(){
     return [
       { act:1, label:"Acte I — Plaine de Sang", zones:[
-        {key:"i1", name:"Campement des Rogues", monsters:["Chaman déchu","Déchu","Squelette","Zombie","Corbeau","Quill Rat","Sorcier noir","Chauve-souris","Araignée des cavernes","Sanglier sauvage","Zombie affamé","Squelette mage","Crapaud venimeux","Chaman squelette","Vermine","Corbeau noir","Chien enragé","Crapaud pesteux","Spectre faible","Sorcier du sang"]},
+        {key:"i1", name:"Campement des Rogues", monsters:[
+          "Chaman déchu","Déchu","Squelette","Zombie","Corbeau","Quill Rat","Sorcier noir",
+          "Chauve-souris","Araignée des cavernes","Sanglier sauvage","Zombie affamé","Squelette mage",
+          "Crapaud venimeux","Chaman squelette","Vermine","Corbeau noir","Chien enragé","Crapaud pesteux",
+          "Spectre faible","Sorcier du sang"
+        ]},
         {key:"iBoss", name:"Repaire d’Andariel", monsters:["Andariel"], boss:true}
       ]},
       { act:2, label:"Acte II — Désert de Lut Gholein", zones:[
-        {key:"ii1", name:"Oasis de Far Oasis", monsters:["Squelette du désert","Scarabée électrique","Scarabée empoisonné","Ver des sables","Guerrier squelette","Zombie desséché","Vautour","Harpie","Momie","Momie desséchée","Chien de sable","Démon mineur","Spectre du désert","Sorcier de sable","Chacal démoniaque","Guerrier momifié","Serpent","Momie empoisonnée","Chien corrupteur","Sorcier des dunes"]},
+        {key:"ii1", name:"Oasis de Far Oasis", monsters:[
+          "Squelette du désert","Scarabée électrique","Scarabée empoisonné","Ver des sables","Guerrier squelette",
+          "Zombie desséché","Vautour","Harpie","Momie","Momie desséchée","Chien de sable","Démon mineur",
+          "Spectre du désert","Sorcier de sable","Chacal démoniaque","Guerrier momifié","Serpent","Momie empoisonnée",
+          "Chien corrupteur","Sorcier des dunes"
+        ]},
         {key:"iiBoss", name:"Tombe de Tal Rasha (Duriel)", monsters:["Duriel"], boss:true}
       ]},
       { act:3, label:"Acte III — Jungle de Kurast", zones:[
-        {key:"iii1", name:"Jungle des araignées", monsters:["Araignée venimeuse","Fétiche","Sorcier fétiche","Grenouille empoisonnée","Guerrier zombi","Petit démon","Grand démon","Spectre","Vampire","Sorcier vampire","Singe démoniaque","Homme-bête","Chauve-souris géante","Sorcier araignée","Guerrier possédé","Crapaud maudit","Esprit corrompu","Sorcière des marais","Guerrier des marais","Serpent venimeux"]},
+        {key:"iii1", name:"Jungle des araignées", monsters:[
+          "Araignée venimeuse","Fétiche","Sorcier fétiche","Grenouille empoisonnée","Guerrier zombi",
+          "Petit démon","Grand démon","Spectre","Vampire","Sorcier vampire","Singe démoniaque","Homme-bête",
+          "Chauve-souris géante","Sorcier araignée","Guerrier possédé","Crapaud maudit","Esprit corrompu",
+          "Sorcière des marais","Guerrier des marais","Serpent venimeux"
+        ]},
         {key:"iiiBoss", name:"Temple de Méphisto", monsters:["Méphisto"], boss:true}
       ]},
       { act:4, label:"Acte IV — Enfers", zones:[
-        {key:"iv1", name:"Rivière de Flammes", monsters:["Chevalier de l’enfer","Chevalier de l’effroi","Démon majeur","Spectre ardent","Vampire de l’enfer","Serpent infernal","Succube","Guerrier démoniaque","Balrog mineur","Balrog majeur","Sorcier démoniaque","Aile de chauve-souris","Zombie infernal","Chien de l’enfer","Esprit du feu","Spectre corrompu","Diablotin","Démon araignée","Spectre rouge","Guerrier corrompu"]},
+        {key:"iv1", name:"Rivière de Flammes", monsters:[
+          "Chevalier de l’enfer","Chevalier de l’effroi","Démon majeur","Spectre ardent","Vampire de l’enfer",
+          "Serpent infernal","Succube","Guerrier démoniaque","Balrog mineur","Balrog majeur","Sorcier démoniaque",
+          "Aile de chauve-souris","Zombie infernal","Chien de l’enfer","Esprit du feu","Spectre corrompu",
+          "Diablotin","Démon araignée","Spectre rouge","Guerrier corrompu"
+        ]},
         {key:"ivBoss", name:"Sanctuaire du Chaos (Diablo)", monsters:["Diablo"], boss:true}
       ]},
       { act:5, label:"Acte V — Mont Arreat", zones:[
-        {key:"v1", name:"Plateau des Hurlants", monsters:["Barbare corrompu","Sorcier corrompu","Loup corrompu","Chaman corrompu","Archer corrompu","Guerrier squelette","Zombie gelé","Spectre de glace","Sorcier de glace","Chien gelé","Géant du froid","Succube du givre","Esprit glacial","Sorcière corrompue","Corbeau de glace","Balrog gelé","Spectre gelé","Chien démoniaque","Démon du froid","Guerrier corrompu"]},
+        {key:"v1", name:"Plateau des Hurlants", monsters:[
+          "Barbare corrompu","Sorcier corrompu","Loup corrompu","Chaman corrompu","Archer corrompu",
+          "Guerrier squelette","Zombie gelé","Spectre de glace","Sorcier de glace","Chien gelé",
+          "Géant du froid","Succube du givre","Esprit glacial","Sorcière corrompue","Corbeau de glace",
+          "Balrog gelé","Spectre gelé","Chien démoniaque","Démon du froid","Guerrier corrompu"
+        ]},
         {key:"vBoss", name:"Salle du Trône (Baal)", monsters:["Baal"], boss:true}
       ]}
     ];
@@ -50,28 +75,28 @@ const Combat = {
     };
   },
 
+  // Vérifie si zone accessible
   zoneAvailable(state, zoneKey){
-    const group = this.groups().find(g=>g.zones.find(z=>z.key===zoneKey));
+    const group=this.groups().find(g=>g.zones.find(z=>z.key===zoneKey));
     if(!group) return false;
-    const z = group.zones.find(z=>z.key===zoneKey);
+    const z=group.zones.find(z=>z.key===zoneKey);
     if(!z) return false;
-    const li = this.lockInfo(state);
-    return li.access[group.act];
+    return this.lockInfo(state).access[group.act];
   },
 
-  // Rencontre aléatoire
+  // Nouvelle rencontre
   newEncounter(zoneKey){
-    const group = this.groups().find(g=>g.zones.find(z=>z.key===zoneKey));
-    const z = group.zones.find(z=>z.key===zoneKey);
-    const name = z.monsters[Math.floor(Math.random()*z.monsters.length)];
-    this.enemy = {
+    const group=this.groups().find(g=>g.zones.find(z=>z.key===zoneKey));
+    const z=group.zones.find(z=>z.key===zoneKey);
+    const name=z.monsters[Math.floor(Math.random()*z.monsters.length)];
+    this.enemy={
       name,
-      level: group.act*5 + Math.floor(Math.random()*5),
+      level: group.act*5+Math.floor(Math.random()*5),
       hp: 30+group.act*20,
       hpMax: 30+group.act*20,
       def: 5*group.act,
-      dice: [1,6+group.act*3],
-      boss: z.boss || ["Andariel","Duriel","Méphisto","Diablo","Baal"].includes(name)
+      dice:[1,6+group.act*3],
+      boss:z.boss || ["Andariel","Duriel","Méphisto","Diablo","Baal"].includes(name)
     };
     document.getElementById("enemyCard").hidden=false;
     document.getElementById("eName").textContent=this.enemy.name;
@@ -89,12 +114,12 @@ const Combat = {
   // Attaque
   attack(){
     if(!this.enemy) return;
-    const s = GameCore.state;
-    const playerDmg = this.rollDice(1,6+s.str);
-    const enemyDmg = this.rollDice(this.enemy.dice[0],this.enemy.dice[1]) - s.def/5;
-    this.enemy.hp -= playerDmg;
+    const s=GameCore.state;
+    const playerDmg=this.rollDice(1,6+s.str);
+    const enemyDmg=this.rollDice(this.enemy.dice[0],this.enemy.dice[1]) - s.def/5;
+    this.enemy.hp-=playerDmg;
     if(this.enemy.hp<0) this.enemy.hp=0;
-    s.hp -= Math.max(1,Math.floor(enemyDmg));
+    s.hp-=Math.max(1,Math.floor(enemyDmg));
     if(s.hp<0) s.hp=0;
     document.getElementById("eHP").textContent=this.enemy.hp;
     document.getElementById("eHpBar").value=this.enemy.hp;
@@ -112,19 +137,24 @@ const Combat = {
     GameCore.save();
   },
 
+  // Victoire
   victory(){
-    const s = GameCore.state;
+    const s=GameCore.state;
     GameCore.addXP(20);
     GameCore.addGold(5);
     GameCore.log(`🏆 ${this.enemy.name} est vaincu ! +20 XP, +5 or`);
-    if(this.enemy.boss){
+
+    // Affiche overlay seulement si c’est un vrai boss
+    if(this.enemy.boss && ["Andariel","Duriel","Méphisto","Diablo","Baal"].includes(this.enemy.name)){
       s.bossesDefeated[this.enemy.name]=true;
       document.getElementById("bossVictoryTitle").textContent=`${this.enemy.name} est vaincu !`;
       document.getElementById("bossVictoryMsg").textContent=`L’acte suivant est débloqué !`;
       document.getElementById("bossVictory").hidden=false;
     }
+
     this.enemy=null;
     document.getElementById("enemyCard").hidden=true;
+    GameCore.save();
   },
 
   rollDice(nb,faces){
@@ -136,24 +166,20 @@ const Combat = {
   // Auto-combat
   toggleAuto(val){
     this.auto=val;
-    if(val){
-      this.timer=setInterval(()=>this.attack(),2000);
-    } else {
-      clearInterval(this.timer);
-    }
+    if(val){ this.timer=setInterval(()=>this.attack(),2000); }
+    else { clearInterval(this.timer); }
   },
 
-  // Lore
   loreFor(zoneKey){
     if(zoneKey.includes("Boss")) return "⚠️ Combat de Boss ! Préparez-vous...";
     return "";
   },
 
-  // Mini-carte des actes
   renderActMap(){
-    const map = document.getElementById("actMap");
+    const map=document.getElementById("actMap");
+    if(!map) return;
     map.innerHTML="";
-    const li = this.lockInfo(GameCore.state);
+    const li=this.lockInfo(GameCore.state);
     for(const g of this.groups()){
       const div=document.createElement("div");
       div.className="actIcon";
@@ -165,7 +191,6 @@ const Combat = {
     }
   },
 
-  // Initialisation UI
   initUI(renderPlayer){
     document.getElementById("attackBtn").onclick=()=>this.attack();
     document.getElementById("fleeBtn").onclick=()=>{
@@ -182,6 +207,5 @@ const Combat = {
     renderPlayer();
   },
 
-  // Offline simulation placeholder
   offlineSim(){ return; }
 };
