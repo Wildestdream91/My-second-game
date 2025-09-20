@@ -1,6 +1,10 @@
 /* ==========================================
-   Idle ARPG v7.3 FR - core.js
+   Idle ARPG v7.4 FR - core.js
    ========================================== */
+
+// ----- Réglage XP global -----
+const XP_RATE = 2.0; // Multiplie tous les gains d’XP par 2
+
 const GameCore={
   state:{},
   newGame(name,cls){
@@ -16,21 +20,44 @@ const GameCore={
   save(){localStorage.setItem("idleARPGsave",JSON.stringify(this.state));},
   load(){
     try{const raw=localStorage.getItem("idleARPGsave");
-      if(raw){this.state=JSON.parse(raw);const eq=this.state.equipment||{};
+      if(raw){this.state=JSON.parse(raw);
+        const eq=this.state.equipment||{};
         for(const s of ["head","amulet","weapon","chest","shield","ring"]) if(!(s in eq)) eq[s]=null;
-        this.state.equipment=eq; if(!this.state.difficulty)this.state.difficulty="Normal";
+        this.state.equipment=eq;
+        if(!this.state.difficulty) this.state.difficulty="Normal";
       } else this.state={created:false};
     }catch(e){console.warn("Load err",e);this.state={created:false};}
   },
   reset(f=false){if(f||confirm("Effacer la sauvegarde ?")){localStorage.removeItem("idleARPGsave");location.reload();}},
-  xpTable:(()=>{const a=[0];for(let i=1;i<=99;i++)a[i]=Math.floor(Math.pow(i,2.2)*100);return a;})(),
-  gainXP(n){this.state.xp+=Math.max(0,Math.floor(n||0));
-    while(this.state.level<99&&this.state.xp>=this.xpTable[this.state.level]){
-      this.state.xp-=this.xpTable[this.state.level]; this.state.level++; this.state.statPts+=5;
-      this.log(`🎉 Niveau ${this.state.level} atteint ! (+5 pts)`); this.recalcVitals(true);
-    } this.save();
+
+  // Courbe d’XP plus douce
+  xpTable:(()=>{ 
+    const arr=[0];
+    for(let i=1;i<=99;i++){
+      const base = i<=20 ? Math.pow(i,1.85)*70
+                : i<=60 ? Math.pow(i,1.98)*85
+                        : Math.pow(i,2.12)*100;
+      arr[i] = Math.floor(base);
+    }
+    return arr;
+  })(),
+
+  // Gain d’XP (boosté)
+  gainXP(amount){
+    const add = Math.max(0, Math.floor((amount||0) * XP_RATE)); // XP boost global
+    this.state.xp += add;
+    while(this.state.level<99 && this.state.xp>=this.xpTable[this.state.level]){
+      this.state.xp -= this.xpTable[this.state.level];
+      this.state.level++;
+      this.state.statPts += 5;
+      this.log(`🎉 Niveau ${this.state.level} atteint ! (+5 pts attribut)`);
+      this.recalcVitals(true); // up -> heal
+    }
+    this.save();
   },
-  addXP(a){this.gainXP(a);}, addGold(a){this.state.gold+=Math.max(0,Math.floor(a||0));this.save();},
+  addXP(a){this.gainXP(a);}, 
+  addGold(a){this.state.gold+=Math.max(0,Math.floor(a||0));this.save();},
+
   equipBonus(){const o={str:0,dex:0,vit:0,ene:0,atk:0,def:0,crit:0,mf:0};
     for(const k in this.state.equipment){const it=this.state.equipment[k]; if(!it) continue; for(const s in o)o[s]+=(it[s]||0);} return o;},
   effStr(){return this.state.str+this.equipBonus().str;},
