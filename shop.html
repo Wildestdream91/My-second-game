@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Idle ARPG v7 — Campement</title>
+  <title>Idle ARPG — Campement</title>
   <link rel="stylesheet" href="css/style.css"/>
 </head>
 <body class="bg">
@@ -25,21 +25,21 @@
     <h3>Marchand</h3>
     <div class="shopRow">
       <div class="shopItem">
-        <div class="title">Potion de vie (petite)</div>
+        <div class="title">Potion de vie</div>
         <div class="desc">Restaure 35% des PV max.</div>
-        <div class="price">Prix : 20 or</div>
+        <div class="price">20 or</div>
         <button class="btn" onclick="buyHP()">Acheter</button>
       </div>
       <div class="shopItem">
-        <div class="title">Potion de mana (petite)</div>
+        <div class="title">Potion de mana</div>
         <div class="desc">Restaure 35% du mana max.</div>
-        <div class="price">Prix : 20 or</div>
+        <div class="price">20 or</div>
         <button class="btn" onclick="buyMana()">Acheter</button>
       </div>
       <div class="shopItem">
         <div class="title">Idole de chance</div>
-        <div class="desc">+5% MF (bonus permanent léger)</div>
-        <div class="price">Prix : 120 or</div>
+        <div class="desc">+5% MF (équipez-la pour activer)</div>
+        <div class="price">120 or</div>
         <button class="btn" onclick="buyCharm()">Acheter</button>
       </div>
     </div>
@@ -62,54 +62,37 @@
 
 <script src="js/core.js"></script>
 <script>
-  GameCore.ensureGameOrRedirect?.("index.html");
+  GameCore.ensureGameOrRedirect("index.html");
 
   function refresh(){
     const s=GameCore.state;
-    document.getElementById("pName").textContent = s.name;
-    document.getElementById("pLvl").textContent = s.level;
-    document.getElementById("pGold").textContent = s.gold;
+    document.getElementById("pName").textContent=s.name;
+    document.getElementById("pLvl").textContent=s.level;
+    document.getElementById("pGold").textContent=s.gold;
     document.getElementById("barHpFill").style.width=(s.hp/s.hpMax*100)+"%";
     document.getElementById("barHpText").textContent=`HP ${s.hp}/${s.hpMax}`;
     document.getElementById("barManaFill").style.width=(s.mana/s.manaMax*100)+"%";
     document.getElementById("barManaText").textContent=`Mana ${s.mana}/${s.manaMax}`;
     document.getElementById("logBox").innerHTML=GameCore.logsHTML();
   }
-
-  function buy(cost, onOK){
+  function buy(cost, ok){
     const s=GameCore.state;
-    if(s.gold < cost){ GameCore.log("Pas assez d’or."); refresh(); return; }
-    s.gold -= cost;
-    onOK();
-    GameCore.save();
-    refresh();
+    if(s.gold<cost){ GameCore.log("Pas assez d’or."); refresh(); return; }
+    s.gold-=cost; ok(); GameCore.save(); refresh();
   }
-
-  function buyHP(){
-    buy(20, ()=>{
-      const s=GameCore.state;
-      const heal = Math.floor(s.hpMax*0.35);
-      s.hp = Math.min(s.hpMax, s.hp + heal);
-      GameCore.log(`🧪 Potion de vie utilisée (+${heal} PV).`);
-    });
-  }
-  function buyMana(){
-    buy(20, ()=>{
-      const s=GameCore.state;
-      const gain = Math.floor(s.manaMax*0.35);
-      s.mana = Math.min(s.manaMax, s.mana + gain);
-      GameCore.log(`🔮 Potion de mana utilisée (+${gain} Mana).`);
-    });
-  }
-  function buyCharm(){
-    buy(120, ()=>{
-      // Ajoute un petit charme MF (bonus passif simulé par anneau greffé)
-      const charm = {name:"Charme porte-bonheur", slot:"ring", rarity:"magique", atk:0, def:0, crit:0, mf:5, str:0,dex:0,vit:0,ene:0};
-      GameCore.state.inventory.push(charm);
-      GameCore.log("🍀 Charme +5% MF ajouté à l’inventaire (équipez-le).");
-    });
-  }
-
+  function buyHP(){ buy(20, ()=>{
+    const s=GameCore.state; const heal=Math.floor(s.hpMax*0.35);
+    s.hp=Math.min(s.hpMax, s.hp+heal); GameCore.log(`🧪 +${heal} PV.`);
+  });}
+  function buyMana(){ buy(20, ()=>{
+    const s=GameCore.state; const gain=Math.floor(s.manaMax*0.35);
+    s.mana=Math.min(s.manaMax, s.mana+gain); GameCore.log(`🔮 +${gain} Mana.`);
+  });}
+  function buyCharm(){ buy(120, ()=>{
+    const charm={name:"Charme porte-bonheur",slot:"ring",rarity:"magique",atk:0,def:0,crit:0,mf:5,str:0,dex:0,vit:0,ene:0};
+    GameCore.state.inventory ||= []; GameCore.state.inventory.push(charm);
+    GameCore.log("🍀 Charme ajouté à l’inventaire.");
+  });}
   refresh();
 </script>
 </body>
