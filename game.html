@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Idle ARPG v7 — Combat</title>
+  <title>Idle ARPG v7.2 — Combat</title>
   <link rel="stylesheet" href="css/style.css"/>
 </head>
 <body class="bg">
@@ -20,12 +20,13 @@
   </nav>
 </header>
 
-<!-- Carte des actes -->
+<!-- Carte des actes (cliquables) -->
 <div id="actMap" class="actMap"></div>
 
 <main class="columns">
-  <!-- Stats du héros -->
+  <!-- Colonne gauche : stats + combat -->
   <section class="panel">
+    <!-- Stats du héros -->
     <div class="heroStats">
       <div><b id="pName">—</b> (Lv <span id="pLvl">1</span>) — <span id="pClass"></span></div>
       <div>FOR <span id="pStr">0</span> — DEX <span id="pDex">0</span> — VIT <span id="pVit">0</span> — ÉNE <span id="pEne">0</span></div>
@@ -37,19 +38,30 @@
       </div>
     </div>
 
-    <!-- Sélecteur de zone -->
+    <!-- Contrôles de zone + auto + difficulté -->
     <div class="zoneRow">
       <label>Zone :
         <select id="zoneSelect"></select>
       </label>
+
       <button id="newEncounter" class="btn">Nouvelle rencontre</button>
+
       <label class="switch">
         <input id="autoToggle" type="checkbox"/>
-        <span>Auto-combat (idle)</span>
+        <span>Auto-combat</span>
+      </label>
+
+      <label>Diff :
+        <select id="diffSelect">
+          <option>Facile</option>
+          <option selected>Normal</option>
+          <option>Difficile</option>
+          <option>Enfer</option>
+        </select>
       </label>
     </div>
 
-    <!-- Carte ennemi -->
+    <!-- Carte de l’ennemi -->
     <div class="enemyCard" id="enemyCard" hidden>
       <div><b id="eName">—</b> (Lv <span id="eLvl">1</span>)</div>
       <div>HP: <span id="eHP">0</span>/<span id="eHPmax">0</span> | DEF: <span id="eDef">—</span> | Dégâts: <span id="eDice">—</span></div>
@@ -63,30 +75,50 @@
     <div id="actLore" class="lore"></div>
   </section>
 
-  <!-- Journal -->
+  <!-- Colonne droite : journal -->
   <aside class="panel log">
     <h3>Journal</h3>
     <div id="logBox" class="logBox"></div>
   </aside>
 </main>
 
-<footer class="footnote">Battez le boss pour progresser à l’acte suivant.</footer>
+<footer class="footnote">Battez le boss pour débloquer l’acte suivant. La difficulté est sauvegardée.</footer>
 
+<!-- Scripts -->
 <script src="js/core.js"></script>
 <script src="js/loot.js"></script>
 <script src="js/combat.js"></script>
 <script>
+  // Redirige si pas de perso
   GameCore.ensureGameOrRedirect?.("index.html");
 
+  // Rendu joueur
   function renderPlayer(){
-    const s=GameCore.state;
-    document.getElementById("pName").textContent=s.name;
-    document.getElementById("pLvl").textContent=s.level;
-    document.getElementById("pClass").textContent=s.cls;
+    const s = GameCore.state;
+    document.getElementById("pName").textContent  = s.name || "—";
+    document.getElementById("pLvl").textContent   = s.level || 1;
+    document.getElementById("pClass").textContent = s.cls || "—";
     GameCore.uiRefreshStatsIfPresent?.();
+    const log = document.getElementById("logBox");
+    if (log) log.innerHTML = GameCore.logsHTML();
   }
 
+  // Init combats + UI
   Combat.initUI(renderPlayer);
+
+  // Applique la difficulté persistée
+  (function initDifficulty(){
+    const sel = document.getElementById("diffSelect");
+    if (!sel) return;
+    sel.value = GameCore.state.difficulty || "Normal";
+    sel.onchange = ()=>{
+      GameCore.state.difficulty = sel.value;
+      GameCore.save();
+      GameCore.log(`⚙️ Difficulté: ${sel.value}`);
+      const log = document.getElementById("logBox");
+      if (log) log.innerHTML = GameCore.logsHTML();
+    };
+  })();
 
   // Petit refresh périodique des barres/valeurs
   setInterval(()=>GameCore.uiRefreshStatsIfPresent?.(), 600);
