@@ -2,63 +2,60 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Idle ARPG — Accueil</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Idle ARPG — Sélection</title>
   <link rel="stylesheet" href="css/style.css"/>
 </head>
 <body class="bg">
-
 <header class="topbar">
-  <h1>Idle ARPG</h1>
+  <h1>Sélection de personnage</h1>
   <nav>
-    <a href="index.html" class="active">Création</a>
+    <a href="index.html" class="active">Sélection</a>
     <a href="game.html">Combat</a>
     <a href="inventory.html">Inventaire</a>
     <a href="shop.html">Campement</a>
     <a href="journal.html">Journal</a>
     <a href="ladder.html">Classement</a>
+    <a href="admin.html">Admin</a>
   </nav>
 </header>
 
-<div id="intro">
-  <h1 class="introTitle">Les Enfers s’ouvrent à nouveau…</h1>
-  <p class="introPhrase">Créez votre héros et partez affronter les hordes.</p>
-</div>
-
-<main id="createPanel" class="panel">
-  <h2>Création du personnage</h2>
-  <form id="createForm" class="grid">
+<main class="columns">
+  <section class="panel">
+    <h2>Créer un personnage</h2>
     <label>Pseudo
-      <input id="heroName" type="text" placeholder="Votre pseudo" required maxlength="20"/>
+      <input id="pName" type="text" placeholder="Ton pseudo..."/>
     </label>
-    <label>Classe
-      <select id="heroClass">
-        <option value="Barbare">Barbare</option>
-        <option value="Paladin">Paladin</option>
-        <option value="Sorcière">Sorcière</option>
-        <option value="Nécromancien">Nécromancien</option>
-        <option value="Amazone">Amazone</option>
-      </select>
-    </label>
-    <button type="submit" class="btn primary">Commencer</button>
-  </form>
-  <div class="hint small">Besoin de repartir de zéro ?</div>
-  <button id="resetBtn" class="btn danger">Réinitialiser la sauvegarde</button>
+    <button class="btn primary" onclick="create()">Créer</button>
+    <div class="muted small" style="margin-top:8px">La partie est sauvegardée dans ton navigateur (localStorage).</div>
+  </section>
 </main>
 
 <script src="js/core.js"></script>
 <script>
-  GameCore.load();
-  if(GameCore.state.created){ location.href="game.html"; }
-  document.getElementById("createForm").addEventListener("submit", e=>{
-    e.preventDefault();
-    GameCore.newGame(
-      document.getElementById("heroName").value.trim(),
-      document.getElementById("heroClass").value
-    );
-    location.href="game.html";
-  });
-  document.getElementById("resetBtn").onclick=()=>GameCore.reset(true);
+function create(){
+  const n=document.getElementById("pName").value.trim();
+  if(!n){ alert("Choisis un pseudo."); return; }
+
+  // crée & tente la sauvegarde
+  GameCore.newGame(n);
+
+  // vérifie que la sauvegarde existe bien
+  const raw = localStorage.getItem("idleARPG_state");
+  if(!raw){
+    alert("⚠️ Sauvegarde impossible. Autorise le stockage local pour ce site.");
+    return;
+  }
+  try{
+    JSON.parse(raw);
+  }catch(e){
+    alert("⚠️ Sauvegarde corrompue, on réinitialise.");
+    localStorage.removeItem("idleARPG_state");
+    return;
+  }
+  // ok → go jeu
+  location.href="game.html";
+}
 </script>
 </body>
 </html>
