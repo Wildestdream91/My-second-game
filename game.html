@@ -3,31 +3,42 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="description" content="Idle ARPG — Combat. Affrontez des ennemis, suivez vos statistiques et lancez des runs persistants.">
   <title>Idle ARPG — Combat</title>
+
+  <!-- Favicon (optionnel) -->
+  <link rel="icon" href="favicon.ico" />
+
+  <!-- Feuille de style -->
   <link rel="stylesheet" href="css/style.css"/>
+
+  <!-- Amélioration du chargement (préchargement optionnel) -->
+  <link rel="preload" href="css/style.css" as="style">
 </head>
 <body class="bg">
 
-<header class="topbar">
+<header class="topbar" role="banner">
   <h1>Idle ARPG — Combat</h1>
-  <nav>
-    <a href="index.html">Création</a>
-    <a href="game.html" class="active">Combat</a>
-    <a href="inventory.html">Inventaire</a>
-    <a href="shop.html">Campement</a>
-    <a href="journal.html">Journal</a>
-    <a href="ladder.html">Classement</a>
+  <nav role="navigation" aria-label="Navigation principale">
+    <ul class="topnav">
+      <li><a href="index.html">Création</a></li>
+      <li><a href="game.html" class="active" aria-current="page">Combat</a></li>
+      <li><a href="inventory.html">Inventaire</a></li>
+      <li><a href="shop.html">Campement</a></li>
+      <li><a href="journal.html">Journal</a></li>
+      <li><a href="ladder.html">Classement</a></li>
+    </ul>
   </nav>
 </header>
 
 <!-- Carte des actes -->
-<div id="actMap" class="actMap"></div>
+<div id="actMap" class="actMap" aria-hidden="true"></div>
 
-<main class="columns">
+<main class="columns" role="main" aria-labelledby="mainTitle">
   <!-- Colonne gauche : joueur + actions -->
-  <section class="panel">
+  <section class="panel" aria-label="Écran de jeu">
     <!-- Stats joueur -->
-    <div class="heroStats">
+    <div class="heroStats" id="playerPanel">
       <div>
         <b id="pName">—</b> (Lv <span id="pLvl">1</span>) — <span id="pClass"></span>
       </div>
@@ -37,16 +48,16 @@
       <div>
         ATQ <span id="pAtk">0</span> — DEF <span id="pDef">0</span> — Crit <span id="pCrit">0</span>% | MF <span id="pMF">0</span>% | Or <span id="pGold">0</span>
       </div>
-      <div class="bars">
-        <div class="bar hp">
+      <div class="bars" aria-hidden="false">
+        <div class="bar hp" role="group" aria-label="Points de vie">
           <div class="bar-fill" id="barHpFill"></div>
           <div class="bar-text" id="barHpText">HP 0/0</div>
         </div>
-        <div class="bar mana">
+        <div class="bar mana" role="group" aria-label="Mana">
           <div class="bar-fill" id="barManaFill"></div>
           <div class="bar-text" id="barManaText">Mana 0/0</div>
         </div>
-        <div class="bar xp">
+        <div class="bar xp" role="group" aria-label="Expérience">
           <div class="bar-fill" id="barXpFill"></div>
           <div class="bar-text" id="barXpText">XP 0/0</div>
         </div>
@@ -54,97 +65,123 @@
     </div>
 
     <!-- Sélecteurs de zone / difficulté / auto -->
-    <div class="zoneRow">
-      <label>Zone :
-        <select id="zoneSelect"></select>
+    <div class="zoneRow" role="region" aria-label="Contrôles de zone et difficulté">
+      <label for="zoneSelect">Zone :
+        <select id="zoneSelect" aria-label="Sélection de zone">
+          <!-- Options générées par JS -->
+        </select>
       </label>
-      <button id="newEncounter" class="btn">Nouvelle rencontre</button>
 
-      <label class="switch">
-        <input id="autoToggle" type="checkbox"/>
+      <button id="newEncounter" class="btn" aria-controls="enemyCard" title="Générer une nouvelle rencontre">Nouvelle rencontre</button>
+
+      <label class="switch" for="autoToggle">
+        <input id="autoToggle" type="checkbox" />
         <span>Auto-combat</span>
       </label>
 
-      <label>Diff :
-        <select id="diffSelect">
-          <option>Facile</option>
-          <option selected>Normal</option>
-          <option>Difficile</option>
-          <option>Enfer</option>
+      <label for="diffSelect">Diff :
+        <select id="diffSelect" aria-label="Sélection de la difficulté">
+          <option value="Facile">Facile</option>
+          <option value="Normal" selected>Normal</option>
+          <option value="Difficile">Difficile</option>
+          <option value="Enfer">Enfer</option>
         </select>
       </label>
     </div>
 
     <!-- Runs XP (persistants) -->
-    <div class="panel" style="margin-top:10px">
+    <div class="panel" style="margin-top:10px" aria-live="polite">
       <h3>Runs XP (style D2)</h3>
-      <div id="runsButtons" class="btnRow"></div>
+      <div id="runsButtons" class="btnRow" aria-hidden="false"></div>
       <div id="runsBox" class="statsBox" style="margin-top:8px">—</div>
-      <button id="runsStop" class="btn danger" style="margin-top:8px" disabled>Stopper le run</button>
+      <button id="runsStop" class="btn danger" style="margin-top:8px" disabled title="Arrêter le run actuel">Stopper le run</button>
     </div>
 
     <!-- Carte ennemi + actions combat -->
-    <div class="enemyCard" id="enemyCard" hidden>
+    <div class="enemyCard" id="enemyCard" hidden aria-hidden="true" aria-live="polite">
       <div><b id="eName">—</b> (Lv <span id="eLvl">1</span>)</div>
       <div>HP: <span id="eHP">0</span>/<span id="eHPmax">0</span> | DEF: <span id="eDef">—</span> | Dégâts: <span id="eDice">—</span></div>
       <div class="actions">
-        <button id="attackBtn" class="btn primary">⚔️ Attaquer</button>
-        <button id="fleeBtn" class="btn">🏃 Fuir</button>
+        <button id="attackBtn" class="btn primary" aria-label="Attaquer l'ennemi" aria-controls="eHpBar">⚔️ Attaquer</button>
+        <button id="fleeBtn" class="btn" aria-label="Fuir le combat">🏃 Fuir</button>
       </div>
     </div>
-    <progress id="eHpBar" value="0" max="1"></progress>
 
-    <div id="actLore" class="lore"></div>
+    <!-- Barre de vie ennemie (accessible) -->
+    <progress id="eHpBar" value="0" max="1" aria-label="Barre de vie ennemie" aria-valuemin="0" aria-valuemax="1" aria-valuenow="0"></progress>
+
+    <div id="actLore" class="lore" aria-live="polite"></div>
   </section>
 
   <!-- Colonne droite : journal -->
-  <aside class="panel log">
-    <h3>Journal</h3>
-    <div id="logBox" class="logBox"></div>
+  <aside class="panel log" aria-label="Journal de combat">
+    <h3 id="mainTitle">Journal</h3>
+    <div id="logBox" class="logBox" role="log" aria-live="polite" aria-atomic="false"></div>
   </aside>
 </main>
 
-<footer class="footnote">Battez les boss pour débloquer les actes. La difficulté est sauvegardée.</footer>
+<footer class="footnote" role="contentinfo">Battez les boss pour débloquer les actes. La difficulté est sauvegardée.</footer>
 
-<!-- Scripts -->
-<script src="js/core.js"></script>
-<script src="js/loot.js"></script>
-<script src="js/combat.js"></script>
-<script src="js/runs.js"></script>
+<noscript>
+  <div class="noscript-warning">JavaScript est requis pour jouer — veuillez activer JavaScript dans votre navigateur.</div>
+</noscript>
+
+<!-- Scripts (déférés pour que le DOM soit prêt) -->
+<script src="js/core.js" defer></script>
+<script src="js/loot.js" defer></script>
+<script src="js/combat.js" defer></script>
+<script src="js/runs.js" defer></script>
+
+<!-- Petit script d'initialisation maintenu ici mais déclenché au DOMContentLoaded pour robustesse -->
 <script>
-  // Bloque l’accès si pas de perso
-  GameCore.ensureGameOrRedirect("index.html");
+  document.addEventListener('DOMContentLoaded', () => {
+    // Bloque l’accès si pas de perso
+    GameCore.ensureGameOrRedirect("index.html");
 
-  // Rendu rapide du joueur (nom, classe, niveau)
-  function renderPlayer(){
-    const s = GameCore.state;
-    document.getElementById("pName").textContent  = s.name;
-    document.getElementById("pLvl").textContent   = s.level;
-    document.getElementById("pClass").textContent = s.cls;
-    GameCore.uiRefreshStatsIfPresent();
-    // Le journal est auto-live via GameCore.updateAllLogs()
-  }
+    // Rendu rapide du joueur (nom, classe, niveau)
+    function renderPlayer(){
+      const s = GameCore.state;
+      document.getElementById("pName").textContent  = s.name;
+      document.getElementById("pLvl").textContent   = s.level;
+      document.getElementById("pClass").textContent = s.cls;
+      GameCore.uiRefreshStatsIfPresent();
+      // Le journal est auto-live via GameCore.updateAllLogs()
+    }
 
-  // Init combat (actes, zones, boutons)
-  Combat.initUI(renderPlayer);
+    // Init combat (actes, zones, boutons)
+    if (typeof Combat !== 'undefined' && Combat.initUI) {
+      Combat.initUI(renderPlayer);
+    } else {
+      console.warn('Combat.initUI indisponible - vérifiez le chargement de js/combat.js');
+    }
 
-  // Applique difficulté sauvegardée + listener
-  (function initDifficulty(){
-    const sel = document.getElementById("diffSelect");
-    sel.value = GameCore.state.difficulty || "Normal";
-    sel.onchange = ()=>{
-      GameCore.state.difficulty = sel.value;
-      GameCore.save();
-      GameCore.log(`⚙️ Difficulté: ${sel.value}`);
-    };
-  })();
+    // Applique difficulté sauvegardée + listener
+    (function initDifficulty(){
+      const sel = document.getElementById("diffSelect");
+      sel.value = GameCore.state.difficulty || "Normal";
+      sel.addEventListener('change', ()=>{
+        GameCore.state.difficulty = sel.value;
+        GameCore.save();
+        GameCore.log(`⚙️ Difficulté: ${sel.value}`);
+      });
+    })();
 
-  // Runs persistants : reprise + UI (même si on change de page)
-  Runs.bootstrap();
-  Runs.initUI();
+    // Runs persistants : reprise + UI (même si on change de page)
+    if (typeof Runs !== 'undefined') {
+      Runs.bootstrap();
+      Runs.initUI();
+    }
 
-  // Petites MAJ périodiques des barres (sécurité)
-  setInterval(()=>GameCore.uiRefreshStatsIfPresent(), 600);
+    // Petites MAJ périodiques des barres (sécurité)
+    setInterval(()=>GameCore.uiRefreshStatsIfPresent(), 600);
+
+    // Initial accessibility attributes for enemy bar
+    const eHpBar = document.getElementById('eHpBar');
+    if (eHpBar) {
+      eHpBar.setAttribute('aria-valuenow', eHpBar.value);
+      eHpBar.setAttribute('aria-valuemax', eHpBar.max || 1);
+    }
+  });
 </script>
 </body>
 </html>
