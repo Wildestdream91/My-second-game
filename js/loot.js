@@ -1,18 +1,35 @@
 /* ==========================================
-   Idle ARPG v7.3 FR - loot.js
+   Idle ARPG v7.6 FR - loot.js
+   - Couleurs par rareté (classes CSS)
+   - iLevel (ilvl) pour chaque objet
+   - Rendu inventaire/équipement avec couleur + ilvl
    ========================================== */
 const Loot={
   slots:["head","amulet","weapon","chest","shield","ring"],
   maxInv:40,
 
-  // Simple générateur (appelé depuis combat via hook optionnel)
   rarities:[
-    {key:"commun",base:60},{key:"magique",base:30},{key:"rare",base:8},{key:"unique",base:2},{key:"set",base:0.5}
+    {key:"commun", base:60},
+    {key:"magique",base:30},
+    {key:"rare",   base:8},
+    {key:"unique", base:2},
+    {key:"set",    base:0.5}
   ],
+  rarityClass(key){
+    return key==="commun" ? "r-commun"
+         : key==="magique"? "r-magique"
+         : key==="rare"   ? "r-rare"
+         : key==="unique" ? "r-unique"
+         : key==="set"    ? "r-set"
+         : "";
+  },
   namesBySlot:{
-    head:["Heaume","Capuche","Couronne"], amulet:["Amulette","Talisman","Glyphe"],
-    weapon:["Épée","Masse","Hache","Baguette","Dague"], chest:["Armure","Plastron","Robe","Cotte"],
-    shield:["Bouclier","Tour","Pavois"], ring:["Anneau","Sceau","Bague"]
+    head:["Heaume","Capuche","Couronne"],
+    amulet:["Amulette","Talisman","Glyphe"],
+    weapon:["Épée","Masse","Hache","Baguette","Dague"],
+    chest:["Armure","Plastron","Robe","Cotte"],
+    shield:["Bouclier","Tour","Pavois"],
+    ring:["Anneau","Sceau","Bague"]
   },
   bonusByRarity:{
     commun:{atk:[0,2],def:[0,2],crit:[0,1],mf:[0,1],stats:[0,1]},
@@ -21,42 +38,101 @@ const Loot={
     unique:{atk:[6,12],def:[6,12],crit:[5,10],mf:[7,12],stats:[2,4]},
     set:{atk:[5,10],def:[5,10],crit:[4,9],mf:[8,14],stats:[2,4]}
   },
-  sellPrice(r){return r==="commun"?5:r==="magique"?15:r==="rare"?50:r==="unique"?150:300;},
-  randInt(a,b){return Math.floor(Math.random()*(b-a+1))+a;}, cap(s){return s.charAt(0).toUpperCase()+s.slice(1);},
+  sellPrice(r){
+    return r==="commun"?5 : r==="magique"?15 : r==="rare"?50 : r==="unique"?150 : 300;
+  },
 
-  rollRarity(mf=0,ctx={boss:false}){const W=this.rarities.map(x=>({...x}));
-    const mfF=Math.min(300,mf); const bR=1+mfF*0.004, bU=1+mfF*0.006, bS=1+mfF*0.008;
-    for(const w of W){if(w.key==="rare")w.base*=bR; if(w.key==="unique")w.base*=bU; if(w.key==="set")w.base*=bS;}
-    if(ctx.boss){for(const w of W){if(w.key==="unique")w.base*=2; if(w.key==="set")w.base*=2.5;}}
+  // utils
+  randInt(a,b){return Math.floor(Math.random()*(b-a+1))+a;},
+  cap(s){return s.charAt(0).toUpperCase()+s.slice(1);},
+
+  // iLevel: basé sur le niveau de l’ennemi (ou du joueur si shop), avec petite variance
+  rollIlvl(ctx){
+    // ctx: { enemyLevel?, act?, boss?, source?:"drop"|"shop" }
+    const s = GameCore.state||{};
+    let base = 1;
+    if (ctx?.source==="shop") {
+      base = s.level || 1;
+    } else if (ctx?.enemyLevel) {
+      base = ctx.enemyLevel;
+    } else if (ctx?.act) {
+      base = ctx.act*6 + 3; // fallback par acte
+    } else {
+      base = s.level || 1;
+    }
+    const variance = this.randInt(-2, +3);
+    const ilvl = Math.max(1, base + variance);
+    return ilvl;
+  },
+
+  // Tables de drop avec MF et bonus boss
+  rollRarity(mf=0,ctx={boss:false}){
+    const W=this.rarities.map(x=>({...x}));
+    const mfF=Math.min(300,mf);
+    const bR=1+mfF*0.004, bU=1+mfF*0.006, bS=1+mfF*0.008;
+    for(const w of W){
+      if(w.key==="rare")   w.base*=bR;
+      if(w.key==="unique") w.base*=bU;
+      if(w.key==="set")    w.base*=bS;
+    }
+    if(ctx?.boss){
+      for(const w of W){ if(w.key==="unique") w.base*=2; if(w.key==="set") w.base*=2.5; }
+    }
     const sum=W.reduce((a,b)=>a+b.base,0); let r=Math.random()*sum;
-    for(const w of W){ if(r<w.base) return w.key; r-=w.base; } return "commun";
+    for(const w of W){ if(r<w.base) return w.key; r-=w.base; }
+    return "commun";
   },
 
-  generateLoot(mf=0, ctx={boss:false}){
-    const baseDrop=ctx.boss?1.0:0.25; if(Math.random()>baseDrop) return null;
-    const rarity=this.rollRarity(mf,ctx);
-    const slot=this.slots[Math.floor(Math.random()*this.slots.length)];
-    const base=(this.namesBySlot[slot]||["Objet"])[Math.floor(Math.random()*(this.namesBySlot[slot]||["Objet"]).length)];
-    const b=this.bonusByRarity[rarity]||this.bonusByRarity.commun;
-    const it={id:"it_"+Date.now()+"_"+Math.floor(Math.random()*1e6), name:`${base} ${this.cap(rarity)}`, slot, rarity,
-      atk:this.randInt(b.atk[0],b.atk[1]), def:this.randInt(b.def[0],b.def[1]), crit:this.randInt(b.crit[0],b.crit[1]),
-      mf:this.randInt(b.mf[0],b.mf[1]), str:0,dex:0,vit:0,ene:0};
+  // Génère 0/1 loot (drop chance + ilvl + affixes)
+  generateLoot(mf=0, ctx={boss:false, act:1, enemyLevel:1}){
+    const baseDrop = ctx.boss ? 1.0 : 0.25;  // boss drop garanti, sinon 25%
+    if(Math.random()>baseDrop) return null;
+
+    const rarity = this.rollRarity(mf, ctx);
+    const slot   = this.slots[Math.floor(Math.random()*this.slots.length)];
+    const baseN  = (this.namesBySlot[slot]||["Objet"])[Math.floor(Math.random()*(this.namesBySlot[slot]||["Objet"]).length)];
+    const b      = this.bonusByRarity[rarity]||this.bonusByRarity.commun;
+
+    const it={
+      id:"it_"+Date.now()+"_"+Math.floor(Math.random()*1e6),
+      name:`${baseN} ${this.cap(rarity)}`,
+      slot, rarity,
+      atk:this.randInt(b.atk[0],b.atk[1]),
+      def:this.randInt(b.def[0],b.def[1]),
+      crit:this.randInt(b.crit[0],b.crit[1]),
+      mf:this.randInt(b.mf[0],b.mf[1]),
+      str:0,dex:0,vit:0,ene:0,
+      ilvl:this.rollIlvl(ctx)
+    };
+
+    // + attributs aléatoires
     const extras=this.randInt(b.stats[0],b.stats[1]);
-    for(let i=0;i<extras;i++){ const k=["str","dex","vit","ene"][Math.floor(Math.random()*4)]; it[k]+=1; }
+    for(let i=0;i<extras;i++){
+      const k=["str","dex","vit","ene"][Math.floor(Math.random()*4)];
+      it[k]+=1;
+    }
 
-    GameCore.state.inventory ||= []; 
+    GameCore.state.inventory ||= [];
     if(GameCore.state.inventory.length>=this.maxInv){ GameCore.log("Inventaire plein. Objet perdu."); return null; }
-    GameCore.state.inventory.push(it); GameCore.log(`💎 Vous trouvez: ${it.name} (${rarity}).`); GameCore.save(); this.renderInventory(); return it;
+    GameCore.state.inventory.push(it);
+    GameCore.log(`💎 Vous trouvez: ${it.name} (ilvl ${it.ilvl}).`);
+    GameCore.save();
+    this.renderInventory();
+    return it;
   },
 
-  // ===== Affichage en LISTE =====
+  // ---------- Rendu UI ----------
   renderEquipBoard(){
     const list=document.getElementById("equipList"); if(!list) return; list.innerHTML="";
     for(const s of this.slots){
       const it=GameCore.state.equipment?.[s]||null;
       const row=document.createElement("div");
       if(it){
-        row.innerHTML=`<b>${s.toUpperCase()}</b> — ${it.name} 
+        const rClass=this.rarityClass(it.rarity);
+        row.innerHTML=`
+          <b>${s.toUpperCase()}</b> —
+          <span class="r-name ${rClass}">${it.name}</span>
+          <span class="badge-ilvl">ilvl ${it.ilvl||1}</span>
           <span class="muted">[ATQ+${it.atk} DEF+${it.def} Crit+${it.crit}% MF+${it.mf}% | FOR+${it.str} DEX+${it.dex} VIT+${it.vit} ÉNE+${it.ene}]</span>
           <button class="btn" style="float:right">Retirer</button>`;
         row.querySelector("button").onclick=()=>{this.unequip(s); this.renderInventory();};
@@ -70,8 +146,11 @@ const Loot={
   renderInventory(){
     const grid=document.getElementById("inventoryGrid"); if(!grid) return; grid.innerHTML="";
     (GameCore.state.inventory||[]).forEach((it,idx)=>{
+      const rClass=this.rarityClass(it.rarity);
       const row=document.createElement("div");
-      row.innerHTML=`<span>${it.name}</span>
+      row.innerHTML=`
+        <span class="r-name ${rClass}">${it.name}</span>
+        <span class="badge-ilvl">ilvl ${it.ilvl||1}</span>
         <span class="muted">[${it.slot} | ATQ+${it.atk} DEF+${it.def} Crit+${it.crit}% MF+${it.mf}% | FOR+${it.str} DEX+${it.dex} VIT+${it.vit} ÉNE+${it.ene}]</span>
         <span style="float:right;display:flex;gap:6px">
           <button class="btn">Équiper</button>
@@ -88,19 +167,22 @@ const Loot={
     GameCore.recalcVitals(false); GameCore.uiRefreshStatsIfPresent?.();
     const st=document.getElementById("charStats"); if(st) st.innerHTML=
       `ATQ ${GameCore.atkTotal()} • DEF ${GameCore.defTotal()} • Crit ${GameCore.critTotal()}% • MF ${GameCore.mfTotal()}%`;
-    const log=document.getElementById("logBox"); if(log) log.innerHTML=GameCore.logsHTML();
+    const log=document.querySelector(".logBox"); if(log) log.innerHTML=GameCore.logsHTML();
   },
 
+  // ---------- Actions inventaire ----------
   equip(idx){
     const it=GameCore.state.inventory?.[idx]; if(!it) return;
     GameCore.state.equipment ||= {head:null,amulet:null,weapon:null,chest:null,shield:null,ring:null};
     if(!(it.slot in GameCore.state.equipment)) GameCore.state.equipment[it.slot]=null;
     const cur=GameCore.state.equipment[it.slot];
-    if(cur){ if(GameCore.state.inventory.length>=this.maxInv){GameCore.log("Inventaire plein."); return;}
+    if(cur){
+      if(GameCore.state.inventory.length>=this.maxInv){GameCore.log("Inventaire plein."); return;}
       GameCore.state.inventory.push(cur);
     }
     GameCore.state.equipment[it.slot]=it; GameCore.state.inventory.splice(idx,1);
-    GameCore.log(`🔧 Équipé: ${it.name}`); GameCore.save(); GameCore.recalcVitals(false);
+    GameCore.log(`🔧 Équipé: ${it.name} (ilvl ${it.ilvl||1})`);
+    GameCore.save(); GameCore.recalcVitals(false);
   },
 
   unequip(slot){
