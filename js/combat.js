@@ -1,156 +1,139 @@
-/* ======================
-   combat.js — combats avec difficultés
-   ====================== */
-GameCore.ensureGameOrRedirect("index.html");
+/* combat.js — boucle combat simple + gains & drops */
+const Combat = (() => {
+  let current = null; // ennemi courant
+  let interval = null;
 
-let E = null; // ennemi actuel
+  function randomBetween(a,b){ return Math.floor(a + Math.random()*(b-a+1)); }
 
-function currentScalars(){
-  const diff = GameCore.getDifficulty?.() || "Normal";
-  return Zones.getDifficultyScalars ? Zones.getDifficultyScalars(diff) : {enemy:{hp:1,dmg:1},reward:{xp:1,gold:1,drop:1,mfBonus:0,rarityBoost:null}};
-}
+  function spawn(){
+    const s=GameCore.state;
+    const z = Zones.getZone(s.currentZone) || { zl:1, baseXP:10, baseGold:5, nameFR:"Zone inconnue" };
+    const diff = Zones.getDifficultyScalars(GameCore.getDifficulty());
+    const namePool = ["Décharné","Sombre rôdeur","Corrompu","Démon mineur","Esprit vengeur","Chauve-souris du sang","Goule","Spectre","Fétiche","Guerrier déchu"];
+    const n = namePool[Math.floor(Math.random()*namePool.length)];
 
-function spawnEnemy(){
-  const s = GameCore.state;
-  const diff = GameCore.getDifficulty?.() || "Normal";
-  const scal = currentScalars();
-
-  // Zone actuelle
-  const zoneId = s.currentZone || "a1-rogue-encampment";
-  const lvl = Zones.enemyLevel ? Zones.enemyLevel(zoneId, diff) : (s.level||1);
-
-  // Base HP/DMG : simple scaling sur le niveau, + scal difficulté
-  const baseHP  = 20 + lvl * 10;
-  const baseDMG = 3  + Math.floor(lvl * 0.8);
-
-  E = {
-    name: "Ennemi",
-    level: lvl,
-    maxHp: Math.floor(baseHP  * (scal.enemy?.hp  ?? 1)),
-    hp:    0,
-    dmg:   Math.floor(baseDMG * (scal.enemy?.dmg ?? 1)),
-    boss: false,
-    zoneId
-  };
-  E.hp = E.maxHp;
-
-  // Si zone marquée boss → plus costaud
-  const z = Zones.getZone ? Zones.getZone(zoneId) : null;
-  if(z?.boss){ E.boss = true; E.name = (z.bossId||"Boss").toUpperCase(); E.maxHp = Math.floor(E.maxHp * 1.8); E.hp = E.maxHp; E.dmg = Math.floor(E.dmg * 1.6); }
-
-  renderEnemy();
-  GameCore.log?.(`👹 ${E.name} (Nv ${E.level}) apparaît.`);
-}
-
-function renderEnemy(){
-  const c = document.getElementById("enemyCard");
-  if(!c) return;
-  if(!E){ c.innerHTML="<div class='muted'>Aucun ennemi.</div>"; return; }
-  c.innerHTML = `
-    <div><b>${E.name}</b> — Nv ${E.level} ${E.boss?"<span class='badge-ilvl'>Boss</span>":""}</div>
-    <progress id="eHpBar" value="${E.hp}" max="${E.maxHp}"></progress>
-    <div class="actions">
-      <button class="btn primary" onclick="attack()">⚔️ Attaquer</button>
-    </div>
-  `;
-}
-
-function attack(){
-  if(!E) return;
-  // Jet d'attaque du joueur
-  const atk = GameCore.atkTotal? GameCore.atkTotal() : (GameCore.effStr()+GameCore.state.level);
-  const critChance = (GameCore.critTotal? GameCore.critTotal() : Math.floor(GameCore.effDex()/2));
-  const isCrit = Math.random()*100 < critChance;
-  const roll = Math.max(1, Math.floor(atk * (0.6 + Math.random()*0.8))); // 0.6x..1.4x
-  const dmgToEnemy = isCrit ? Math.floor(roll*1.6) : roll;
-
-  E.hp = Math.max(0, E.hp - dmgToEnemy);
-  GameCore.log?.(`💥 Vous infligez ${dmgToEnemy}${isCrit?" (Crit)":""}.`);
-
-  // Ennemi riposte s'il vit
-  if(E.hp>0){
-    const def = GameCore.defTotal? GameCore.defTotal() : Math.floor(GameCore.effDex() + GameCore.state.level/2);
-    let dmg = Math.max(1, E.dmg - Math.floor(def*0.25));
-    dmg = Math.floor(dmg * (0.85 + Math.random()*0.3)); // variance
-    GameCore.state.hp = Math.max(0, GameCore.state.hp - dmg);
-    GameCore.log?.(`🩸 L'ennemi vous touche pour ${dmg}.`);
+    // HP/Dégâts ennemis scalés par zone & difficulté
+    const baseHP  = Math.max(12, z.zl*6);
+    const baseDMG = Math.max(3, Math.floor(z.zl*0.8));
+    current = {
+      name: `${n} (Z${z.zl})`,
+      hpMax: Math.floor(baseHP * (diff.enemy.hp||1)),
+      hp:    Math.floor(baseHP * (diff.enemy.hp||1)),
+      dmg:   Math.floor(baseDMG * (diff.enemy.dmg||1)),
+      zone: z
+    };
+    renderEnemy();
+    GameCore.log(`Un ${current.name} apparaît.`);
   }
 
-  // UI bars persos (si page présente)
-  const s=GameCore.state;
-  const hpFill=document.getElementById("barHpFill");
-  const hpText=document.getElementById("barHpText");
-  if(hpFill) hpFill.style.width=(s.hp/s.hpMax*100)+"%";
-  if(hpText) hpText.textContent=`HP ${s.hp}/${s.hpMax}`;
-
-  renderEnemy();
-
-  // Fin combat ?
-  if(E.hp<=0){ onEnemyKilled(); }
-  else if(s.hp<=0){ onPlayerDead(); }
-
-  GameCore.save?.();
-}
-
-function onEnemyKilled(){
-  const scal = currentScalars();
-  const lvl = E.level;
-
-  // base XP / Or
-  let baseXP = 8 + lvl * 6;
-  let baseGold = 5 + lvl * 4;
-  if(E.boss){ baseXP *= 3.5; baseGold *= 3.0; }
-
-  // 👉 Application des taux admin
-  const cfg = GameCore.getConfig?.() || {};
-  const xpGain   = Math.floor(baseXP  * (scal.reward?.xp   ?? 1) * ((cfg.xpRate  ?? 100)/100));
-  const goldGain = Math.floor(baseGold * (scal.reward?.gold ?? 1) * ((cfg.goldRate?? 100)/100));
-
-  GameCore.addXP?.(xpGain);
-  GameCore.addGold?.(goldGain);
-  GameCore.log?.(`🏵️ Ennemi vaincu ! +${xpGain} XP, +${goldGain} or.`);
-
-  // Loot avec contexte difficulté
-  const mfEquip = GameCore.mfTotal? GameCore.mfTotal():0;
-  const mfDiff  = scal.reward?.mfBonus || 0;
-  const mfAdmin = cfg.mfRate || 0;
-  const mf = mfEquip + mfDiff + mfAdmin;
-
-  const ctx = {
-    boss: E.boss,
-    act: Zones.getZone ? (Zones.getZone(E.zoneId)?.act || 1) : 1,
-    enemyLevel: E.level,
-    dropBonus: (scal.reward?.drop || 1) * ((cfg.dropRate??100)/100),
-    rarityBoost: scal.reward?.rarityBoost || null
-  };
-  if(typeof Loot?.generateLoot === "function"){
-    Loot.generateLoot(mf, ctx);
+  function renderEnemy(){
+    const c = document.getElementById("enemyCard"); if(!c) return;
+    if(!current){ c.innerHTML = `<div class="muted">Aucun ennemi. Choisis une zone puis <b>Aller</b>.</div>`; return; }
+    const hpPct = Math.max(0, Math.min(100, Math.round(current.hp/current.hpMax*100)));
+    c.innerHTML = `
+      <div class="name">${current.name}</div>
+      <div class="hpbar"><div class="hpfill" style="width:${hpPct}%"></div></div>
+      <div class="muted small">DMG ${current.dmg} • PV ${current.hp}/${current.hpMax}</div>
+      <div style="display:flex;gap:8px;margin-top:6px">
+        <button class="btn primary" id="btnAttack">Attaquer</button>
+        <button class="btn" id="btnAuto">${interval?'Arrêter':'Auto'}</button>
+      </div>
+    `;
+    document.getElementById("btnAttack").onclick = attackOnce;
+    document.getElementById("btnAuto").onclick = toggleAuto;
   }
 
-  // Progression de boss
-  const z = Zones.getZone ? Zones.getZone(E.zoneId) : null;
-  if(z?.boss && z.bossId){
-    GameCore.onBossDefeated?.(z.bossId);
+  function playerAttackDamage(){
+    const base = GameCore.atkTotal();
+    // jet de dés : 70%..130% du total, et critique selon %crit
+    let dmg = Math.max(1, Math.floor(base * (0.7 + Math.random()*0.6)));
+    const critRoll = Math.random()*100 < (GameCore.critTotal()||0);
+    if(critRoll) dmg = Math.floor(dmg*1.5);
+    return dmg;
   }
 
-  spawnEnemy();
-}
-
-function onPlayerDead(){
-  GameCore.log?.("💀 Vous êtes mort ! Récupération au campement.");
-  const s=GameCore.state;
-  s.hp = Math.floor(s.hpMax*0.5); // respawn 50%
-  GameCore.save?.();
-  spawnEnemy();
-}
-
-// init
-(function initCombat(){
-  if(!GameCore.isDifficultyUnlocked?.(GameCore.getDifficulty?.() || "Normal")){
-    GameCore.setDifficulty?.("Normal");
+  function enemyAttackDamage(){
+    const s=GameCore.state;
+    const def = GameCore.defTotal();
+    let dmg = Math.max(1, current.dmg - Math.floor(def*0.25));
+    // petite variance
+    dmg = Math.max(1, Math.floor(dmg * (0.85 + Math.random()*0.3)));
+    return dmg;
   }
-  if(!GameCore.state.currentZone){
-    GameCore.state.currentZone="a1-rogue-encampment";
+
+  function giveRewards(z){
+    const cfg=GameCore.getConfig();
+    const diff=Zones.getDifficultyScalars(GameCore.getDifficulty());
+    // XP/Gold scalés difficulté + admin
+    const xpGain = Math.max(1, Math.floor((z.baseXP || 10) * (diff.reward.xp||1) * ((cfg.xpRate||100)/100)));
+    const goldGain = Math.max(1, Math.floor((z.baseGold || 5) * (diff.reward.gold||1) * ((cfg.goldRate||100)/100)));
+    GameCore.addXP(xpGain); GameCore.addGold(goldGain);
+    GameCore.log(`+${xpGain} XP, +${goldGain} or`);
+    // Drop
+    Loot.rollDrop(z);
   }
-  spawnEnemy();
+
+  function checkDeath(){
+    if(current && current.hp<=0){
+      GameCore.log(`${current.name} est vaincu !`);
+      giveRewards(current.zone);
+      // Boss gate (si zone boss)
+      if(current.zone.boss && current.zone.bossId){
+        GameCore.onBossDefeated(current.zone.bossId);
+      }
+      current=null; renderEnemy();
+      // respawn après un court délai si auto
+      if(interval){ setTimeout(spawn, 500); }
+      return true;
+    }
+    return false;
+  }
+
+  function attackOnce(){
+    if(!current) return;
+    // Joueur frappe
+    const dmgP = playerAttackDamage();
+    current.hp = Math.max(0, current.hp - dmgP);
+    GameCore.log(`Vous infligez ${dmgP} dégâts.`);
+    renderEnemy();
+    if(checkDeath()) return;
+
+    // L'ennemi riposte
+    const dmgE = enemyAttackDamage();
+    const s=GameCore.state;
+    s.hp = Math.max(0, s.hp - dmgE);
+    GameCore.log(`Vous subissez ${dmgE} dégâts.`);
+    if(s.hp<=0){
+      // KO → petite pénalité & retour au camp
+      GameCore.log(`💀 Vous tombez au combat ! Perte d'or mineure et retour au camp.`);
+      s.gold = Math.max(0, Math.floor(s.gold*0.9)); // -10%
+      s.hp = Math.max(1, Math.floor(s.hpMax*0.5));
+      GameCore.save();
+      current=null; renderEnemy();
+      if(interval) toggleAuto(); // stop auto
+      return;
+    }
+    GameCore.save();
+  }
+
+  function toggleAuto(){
+    if(interval){
+      clearInterval(interval); interval=null;
+      GameCore.log("Auto OFF");
+      renderEnemy();
+    }else{
+      if(!current) spawn();
+      interval = setInterval(()=>{ attackOnce(); }, 950);
+      GameCore.log("Auto ON");
+      renderEnemy();
+    }
+  }
+
+  // ----- Initialisation à l’arrivée sur game.html -----
+  (function init(){
+    // spawn direct si une zone est déjà sélectionnée
+    spawn();
+  })();
+
+  return { spawn, attackOnce, toggleAuto };
 })();

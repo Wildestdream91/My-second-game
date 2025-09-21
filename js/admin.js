@@ -1,59 +1,67 @@
-/* admin.js — panneau d’admin simple (front-only) */
-const Admin = {
-  // Clé localStorage
-  KEY_CFG: "idleARPG_config",
-  KEY_PW:  "idleARPG_admin_pw",
+/* admin.js — panneau admin (taux, MF, mot de passe) */
+const Admin = (() => {
+  const PASS_KEY = "idleARPG_adminPass";
+  const CONF_KEY = "idleARPG_config";
+  const DEFAULT_PASS = "admin";
 
-  // Connexion
-  checkPass(){
-    const pwInput = document.getElementById("adminPass").value;
-    const stored = localStorage.getItem(this.KEY_PW) || "admin";
-    if(pwInput === stored){
+  function getPass(){ return localStorage.getItem(PASS_KEY) || DEFAULT_PASS; }
+  function setPass(p){ localStorage.setItem(PASS_KEY, p); }
+
+  function checkPass(){
+    const input = document.getElementById("adminPass").value;
+    if(input === getPass()){
       document.getElementById("loginBox").style.display="none";
       document.getElementById("adminPanel").style.display="block";
-      this.load();
-    } else {
-      document.getElementById("loginMsg").textContent = "⛔ Mot de passe incorrect.";
+      loadConfigToUI();
+      document.getElementById("loginMsg").textContent="";
+    }else{
+      document.getElementById("loginMsg").textContent="Mot de passe incorrect.";
     }
-  },
+  }
 
-  // Charger les valeurs dans le formulaire
-  load(){
-    const cfg = JSON.parse(localStorage.getItem(this.KEY_CFG) || "{}");
+  function loadConfig(){
+    try{ return JSON.parse(localStorage.getItem(CONF_KEY) || "{}"); }
+    catch{ return {}; }
+  }
+  function saveConfig(cfg){
+    localStorage.setItem(CONF_KEY, JSON.stringify(cfg));
+  }
+
+  function loadConfigToUI(){
+    const cfg = loadConfig();
     document.getElementById("xpRate").value   = cfg.xpRate   ?? 100;
     document.getElementById("goldRate").value = cfg.goldRate ?? 100;
     document.getElementById("dropRate").value = cfg.dropRate ?? 100;
     document.getElementById("mfRate").value   = cfg.mfRate   ?? 0;
-  },
-
-  // Sauvegarder les valeurs saisies
-  save(){
-    const cfg = {
-      xpRate:   parseInt(document.getElementById("xpRate").value,10)   || 100,
-      goldRate: parseInt(document.getElementById("goldRate").value,10) || 100,
-      dropRate: parseInt(document.getElementById("dropRate").value,10) || 100,
-      mfRate:   parseInt(document.getElementById("mfRate").value,10)   || 0
-    };
-    localStorage.setItem(this.KEY_CFG, JSON.stringify(cfg));
-    document.getElementById("saveMsg").textContent = "✅ Paramètres enregistrés.";
-    setTimeout(()=>{document.getElementById("saveMsg").textContent="";}, 1500);
-  },
-
-  // Reset aux valeurs par défaut
-  reset(){
-    localStorage.removeItem(this.KEY_CFG);
-    this.load();
-    document.getElementById("saveMsg").textContent = "♻️ Réinitialisé.";
-    setTimeout(()=>{document.getElementById("saveMsg").textContent="";}, 1500);
-  },
-
-  // Changer le mot de passe
-  changePass(){
-    const npw = document.getElementById("newPass").value.trim();
-    if(!npw){ alert("Veuillez entrer un nouveau mot de passe."); return; }
-    localStorage.setItem(this.KEY_PW, npw);
-    document.getElementById("newPass").value="";
-    document.getElementById("saveMsg").textContent = "🔒 Mot de passe mis à jour.";
-    setTimeout(()=>{document.getElementById("saveMsg").textContent="";}, 1500);
   }
-};
+
+  function save(){
+    const cfg = {
+      xpRate:   Number(document.getElementById("xpRate").value),
+      goldRate: Number(document.getElementById("goldRate").value),
+      dropRate: Number(document.getElementById("dropRate").value),
+      mfRate:   Number(document.getElementById("mfRate").value)
+    };
+    saveConfig(cfg);
+    document.getElementById("saveMsg").textContent = "Sauvegardé.";
+    setTimeout(()=>{ document.getElementById("saveMsg").textContent=""; }, 1500);
+  }
+
+  function reset(){
+    localStorage.removeItem(CONF_KEY);
+    loadConfigToUI();
+    document.getElementById("saveMsg").textContent = "Réinitialisé.";
+    setTimeout(()=>{ document.getElementById("saveMsg").textContent=""; }, 1500);
+  }
+
+  function changePass(){
+    const np = document.getElementById("newPass").value.trim();
+    if(!np){ alert("Entre un nouveau mot de passe."); return; }
+    setPass(np);
+    alert("Mot de passe mis à jour.");
+    document.getElementById("newPass").value="";
+  }
+
+  // Auto-show panel si déjà loggé (optionnel simple : on ne garde pas de session)
+  return { checkPass, save, reset, changePass };
+})();
