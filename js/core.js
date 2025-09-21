@@ -1,18 +1,50 @@
 /* ======================
-   core.js : gestion état
+   core.js : gestion état (robuste)
    - Difficultés: Normal / Cauchemar / Enfer
    - Déblocage: battre Baal dans la diff courante
+   - Sauvegarde/chargement blindés + getConfig()
    ====================== */
 const GameCore={
   state:null,
 
   // ---- Base I/O ----
-  save(){ localStorage.setItem("idleARPG_state", JSON.stringify(this.state)); },
-  load(){ this.state=JSON.parse(localStorage.getItem("idleARPG_state")||"null"); return this.state; },
-  ensureGameOrRedirect(url){ if(!this.load()) location.href=url; },
+  save(){
+    try{
+      localStorage.setItem("idleARPG_state", JSON.stringify(this.state));
+      // vérification immédiate
+      const back = localStorage.getItem("idleARPG_state");
+      if(!back) throw new Error("write_check_failed");
+    }catch(e){
+      alert("⚠️ Impossible d’enregistrer la partie (localStorage). Active le stockage local pour ce site.");
+      console.error("Save error:", e);
+    }
+  },
+  load(){
+    try{
+      const raw = localStorage.getItem("idleARPG_state");
+      if(!raw){ this.state=null; return null; }
+      this.state = JSON.parse(raw);
+      return this.state;
+    }catch(e){
+      console.error("Load error, clearing corrupted state:", e);
+      localStorage.removeItem("idleARPG_state");
+      this.state=null;
+      return null;
+    }
+  },
+  ensureGameOrRedirect(url){
+    const ok = this.load();
+    if(!ok){
+      console.warn("No game state found, redirecting to", url);
+      location.href = url;
+    }
+  },
 
-  // 👉 NEW: charger config admin (taux)
-  getConfig(){ return JSON.parse(localStorage.getItem("idleARPG_config")||"{}"); },
+  // 👉 Admin config (XP/Or/Drop/MF)
+  getConfig(){ 
+    try{ return JSON.parse(localStorage.getItem("idleARPG_config")||"{}"); }
+    catch{ return {}; }
+  },
 
   // ---- Init / new game ----
   newGame(name, cls="Aventurier"){
@@ -23,14 +55,14 @@ const GameCore={
       hpMax:50, hp:50, manaMax:20, mana:20,
       inventory:[], equipment:{head:null,amulet:null,weapon:null,chest:null,shield:null,ring:null},
       logs:[],
-      // difficultés
+      // difficultés (gating)
       difficulty:"Normal",
       progress:{
         "Normal":   { bossesDefeated:{}, actReached:1 },
         "Cauchemar":{ bossesDefeated:{}, actReached:1, locked:true },
         "Enfer":    { bossesDefeated:{}, actReached:1, locked:true }
       },
-      // carte/zone active
+      // position
       currentAct:1,
       currentZone:"a1-rogue-encampment"
     };
