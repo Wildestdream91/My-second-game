@@ -23,9 +23,23 @@
 <main class="columns">
   <section class="panel">
     <h2>Créer un personnage</h2>
-    <label>Pseudo
+
+    <label style="display:block;margin-bottom:8px">Pseudo
       <input id="pName" type="text" placeholder="Ton pseudo..."/>
     </label>
+
+    <label style="display:block;margin-bottom:8px">Classe
+      <select id="pClass">
+        <option value="Barbare">Barbare</option>
+        <option value="Sorcieres">Sorcieres</option>
+        <option value="Paladin">Paladin</option>
+        <option value="Necromancien">Necromancien</option>
+        <option value="Amazone">Amazone</option>
+        <option value="Assassin">Assassin</option>
+        <option value="Druide">Druide</option>
+      </select>
+    </label>
+
     <button class="btn primary" onclick="create()">Créer</button>
     <div class="muted small" style="margin-top:8px">
       La partie est sauvegardée dans ton navigateur (localStorage).
@@ -35,29 +49,33 @@
 
 <script src="js/core.js"></script>
 <script>
+// Si une partie existe déjà → aller directement au jeu
+(function autoRedirect(){
+  try{
+    const raw=localStorage.getItem("idleARPG_state");
+    if(raw){ const st=JSON.parse(raw); if(st && st.name){ location.href="game.html"; } }
+  }catch(_){}
+})();
+
 function create(){
   const n=document.getElementById("pName").value.trim();
+  const c=document.getElementById("pClass").value;
   if(!n){ alert("Choisis un pseudo."); return; }
 
-  // crée et tente la sauvegarde
-  GameCore.newGame(n);
+  GameCore.newGame(n, c);
 
-  // vérifie que la sauvegarde a bien été écrite
+  // Vérifie la sauvegarde
   const raw = localStorage.getItem("idleARPG_state");
   if(!raw){
     alert("⚠️ Sauvegarde impossible. Autorise le stockage local pour ce site.");
     return;
   }
-
-  // test de relecture
   try{ JSON.parse(raw); }
   catch(e){
     alert("⚠️ Sauvegarde corrompue. On réinitialise…");
     localStorage.removeItem("idleARPG_state");
     return;
   }
-
-  // ok → on part au jeu
   location.href="game.html";
 }
 </script>
