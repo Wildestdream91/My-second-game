@@ -21,7 +21,6 @@
 </header>
 
 <main class="columns">
-  <!-- Colonne gauche : Boutique -->
   <section class="panel">
     <h2>Boutique</h2>
     <div class="grid">
@@ -30,10 +29,9 @@
       <button class="btn" onclick="buyCharm()">🍀 Charme porte-bonheur (120 or)</button>
     </div>
     <p class="muted small">Les potions restaurent 35% de vos PV/Mana max.  
-      Le charme donne +5% MF et a un ilvl basé sur votre niveau.</p>
+      Le charme donne +5% MF et a un ilvl/niveau requis basé sur votre niveau.</p>
   </section>
 
-  <!-- Colonne droite : Infos joueur + Journal -->
   <aside class="panel">
     <div>
       <b id="pName">—</b> (Nv <span id="pLvl">1</span>)  
@@ -58,7 +56,6 @@
   Achetez potions et charmes pour renforcer vos chances !
 </footer>
 
-<!-- Scripts -->
 <script src="js/core.js"></script>
 <script src="js/loot.js"></script>
 <script>
@@ -90,9 +87,10 @@
   });}
   function buyCharm(){ buy(120, ()=>{
     const ilvl = Loot.rollIlvl({source:"shop"});
-    const charm={name:"Charme porte-bonheur",slot:"ring",rarity:"magique",atk:0,def:0,crit:0,mf:5,str:0,dex:0,vit:0,ene:0, ilvl};
+    const req  = Loot.requiredLevel(ilvl,"magique");
+    const charm={name:"Charme porte-bonheur",slot:"ring",rarity:"magique",atk:0,def:0,crit:0,mf:5,str:0,dex:0,vit:0,ene:0, ilvl, reqLvl:req};
     GameCore.state.inventory ||= []; GameCore.state.inventory.push(charm);
-    GameCore.log(`🍀 Charme (ilvl ${ilvl}) ajouté à l’inventaire.`);
+    GameCore.log(`🍀 Charme (ilvl ${ilvl}, Req Nv ${req}) ajouté à l’inventaire.`);
   });}
   refresh();
 </script>
