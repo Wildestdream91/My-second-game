@@ -3,12 +3,13 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-  <title>Idle ARPG — Inventaire</title>
+  <title>Idle ARPG — Inventaire & Fiche perso</title>
   <link rel="stylesheet" href="css/style.css"/>
 </head>
 <body class="bg">
+
 <header class="topbar">
-  <h1>Inventaire</h1>
+  <h1>Inventaire & Fiche perso</h1>
   <nav>
     <a href="index.html">Sélection</a>
     <a href="game.html">Combat</a>
@@ -16,29 +17,116 @@
     <a href="shop.html">Campement</a>
     <a href="journal.html">Journal</a>
     <a href="ladder.html">Classement</a>
+    <a href="admin.html">Admin</a>
   </nav>
 </header>
 
-<main class="columns">
+<main class="columns" style="grid-template-columns: 0.9fr 1.1fr;">
   <section class="panel">
-    <h2>Équipement</h2>
-    <div id="equipList" class="equipList"></div>
+    <h2 style="margin-bottom:6px">Fiche de personnage</h2>
+    <div style="margin-bottom:8px">
+      <b id="cName">—</b>
+      (<span id="cClass">—</span>) — Nv <span id="cLvl">1</span>
+      • Or: <b id="cGold">0</b>
+    </div>
+    <div class="bars">
+      <div class="bar hp">
+        <div class="bar-fill" id="barHpFill"></div>
+        <div class="bar-text" id="barHpText">HP 0/0</div>
+      </div>
+      <div class="bar mana">
+        <div class="bar-fill" id="barManaFill"></div>
+        <div class="bar-text" id="barManaText">Mana 0/0</div>
+      </div>
+      <div class="bar xp">
+        <div class="bar-fill" id="barXpFill"></div>
+        <div class="bar-text" id="barXpText">XP 0/0</div>
+      </div>
+    </div>
+    <div class="statsBox" style="margin-top:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <b>Caractéristiques</b>
+        <span class="muted">Points restants: <b id="cPts">0</b></span>
+      </div>
+      <div class="grid" style="grid-template-columns:repeat(2,minmax(160px,1fr));gap:8px">
+        <div>FOR <b id="cStr">0</b> <button class="btn" id="btnStr">+1</button></div>
+        <div>DEX <b id="cDex">0</b> <button class="btn" id="btnDex">+1</button></div>
+        <div>VIT <b id="cVit">0</b> <button class="btn" id="btnVit">+1</button></div>
+        <div>ÉNE <b id="cEne">0</b> <button class="btn" id="btnEne">+1</button></div>
+      </div>
+    </div>
+    <div class="statsBox" style="margin-top:10px">
+      <b>Statistiques dérivées</b>
+      <div class="grid" style="grid-template-columns:repeat(2,minmax(160px,1fr));gap:6px;margin-top:6px">
+        <div>ATQ totale: <b id="cAtk">0</b></div>
+        <div>DEF totale: <b id="cDef">0</b></div>
+        <div>Crit: <b id="cCrit">0</b>%</div>
+        <div>Magic Find: <b id="cMF">0</b>%</div>
+      </div>
+    </div>
+    <div class="panel" style="margin-top:12px">
+      <h3>Journal (aperçu)</h3>
+      <div class="logBox" id="logBox"></div>
+    </div>
   </section>
 
   <section class="panel">
-    <h2>Inventaire</h2>
+    <h2>Équipement</h2>
+    <div id="equipList" class="equipList"></div>
+    <h2 style="margin:14px 0 10px">Inventaire</h2>
     <div id="inventoryGrid" class="invList"></div>
   </section>
 </main>
 
-<script src="js/core.js"></script>
+<script src="js/core.v3.js"></script>
 <script src="js/loot.js"></script>
 <script>
   GameCore.ensureGameOrRedirect("index.html");
-  // premier rendu
-  Loot.renderInventory();
-  // rafraîchit périodiquement au cas où d’autres pages modifient la save
-  setInterval(()=>Loot.renderInventory(), 2000);
+
+  function refreshChar(){
+    const s = GameCore.state || {};
+    document.getElementById("cName").textContent  = s.name || "—";
+    document.getElementById("cClass").textContent = s.cls || "Aventurier";
+    document.getElementById("cLvl").textContent   = s.level || 1;
+    document.getElementById("cGold").textContent  = s.gold || 0;
+
+    const effStr = GameCore.effStr ? GameCore.effStr() : (s.str||0);
+    const effDex = GameCore.effDex ? GameCore.effDex() : (s.dex||0);
+    const effVit = GameCore.effVit ? GameCore.effVit() : (s.vit||0);
+    const effEne = GameCore.effEne ? GameCore.effEne() : (s.ene||0);
+    document.getElementById("cStr").textContent = effStr;
+    document.getElementById("cDex").textContent = effDex;
+    document.getElementById("cVit").textContent = effVit;
+    document.getElementById("cEne").textContent = effEne;
+    document.getElementById("cPts").textContent = s.statPts ?? 0;
+
+    document.getElementById("cAtk").textContent  = GameCore.atkTotal ? GameCore.atkTotal() : (effStr + (s.level||0));
+    document.getElementById("cDef").textContent  = GameCore.defTotal ? GameCore.defTotal() : Math.floor(effDex) + Math.floor((s.level||0)/2);
+    document.getElementById("cCrit").textContent = GameCore.critTotal ? GameCore.critTotal() : Math.floor(effDex/2);
+    document.getElementById("cMF").textContent   = GameCore.mfTotal ? GameCore.mfTotal() : 0;
+
+    const setW = (id,v)=>{ const el=document.getElementById(id); if(el) el.style.width=(v||0)+"%"; };
+    const setT = (id,t)=>{ const el=document.getElementById(id); if(el) el.textContent=t; };
+    if(s.hpMax){
+      setW("barHpFill", (s.hp/s.hpMax*100)); setT("barHpText", `HP ${s.hp}/${s.hpMax}`);
+    }
+    if(s.manaMax){
+      setW("barManaFill", (s.mana/s.manaMax*100)); setT("barManaText", `Mana ${s.mana}/${s.manaMax}`);
+    }
+    const need = GameCore.xpTable ? (GameCore.xpTable[s.level]||1) : 100;
+    setW("barXpFill", (s.xp/need*100)); setT("barXpText", `XP ${s.xp}/${need}`);
+
+    document.getElementById("logBox").innerHTML = GameCore.logsHTML ? GameCore.logsHTML() : "";
+  }
+  function wireStatButtons(){
+    [["btnStr","str"],["btnDex","dex"],["btnVit","vit"],["btnEne","ene"]].forEach(([id,stat])=>{
+      const b=document.getElementById(id);
+      if(!b) return;
+      b.onclick=()=>{ GameCore.spendStatPoint(stat); refreshChar(); Loot.renderInventory(); };
+    });
+  }
+  refreshChar(); wireStatButtons(); Loot.renderInventory();
+  setInterval(()=>{ refreshChar(); }, 800);
 </script>
 </body>
 </html>

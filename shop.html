@@ -2,12 +2,11 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <title>Idle ARPG — Campement</title>
   <link rel="stylesheet" href="css/style.css"/>
 </head>
 <body class="bg">
-
 <header class="topbar">
   <h1>Campement</h1>
   <nav>
@@ -17,83 +16,51 @@
     <a href="shop.html" class="active">Campement</a>
     <a href="journal.html">Journal</a>
     <a href="ladder.html">Classement</a>
+    <a href="admin.html">Admin</a>
   </nav>
 </header>
 
 <main class="columns">
   <section class="panel">
     <h2>Boutique</h2>
-    <div class="grid">
-      <button class="btn" onclick="buyHP()">🧪 Potion de soin (20 or)</button>
-      <button class="btn" onclick="buyMana()">🔮 Potion de mana (20 or)</button>
-      <button class="btn" onclick="buyCharm()">🍀 Charme porte-bonheur (120 or)</button>
+    <div class="grid" style="grid-template-columns:1fr 1fr;gap:8px">
+      <button class="btn" onclick="buy('hp')">Potion de vie (20 or)</button>
+      <button class="btn" onclick="buy('mana')">Potion de mana (15 or)</button>
+      <button class="btn" onclick="buy('charm')">Petit charme MF +5% (100 or)</button>
     </div>
-    <p class="muted small">Les potions restaurent 35% de vos PV/Mana max.  
-      Le charme donne +5% MF et a un ilvl/niveau requis basé sur votre niveau.</p>
+    <div class="muted" style="margin-top:8px">Or: <b id="gold">0</b></div>
   </section>
-
-  <aside class="panel">
-    <div>
-      <b id="pName">—</b> (Nv <span id="pLvl">1</span>)  
-      — Or: <span id="pGold">0</span>
-    </div>
-    <div class="bars">
-      <div class="bar hp">
-        <div class="bar-fill" id="barHpFill"></div>
-        <div class="bar-text" id="barHpText">HP 0/0</div>
-      </div>
-      <div class="bar mana">
-        <div class="bar-fill" id="barManaFill"></div>
-        <div class="bar-text" id="barManaText">Mana 0/0</div>
-      </div>
-    </div>
-    <h3>Journal</h3>
-    <div id="logBox" class="logBox"></div>
-  </aside>
 </main>
 
-<footer class="footnote">
-  Achetez potions et charmes pour renforcer vos chances !
-</footer>
-
-<script src="js/core.js"></script>
-<script src="js/loot.js"></script>
+<script src="js/core.v3.js"></script>
 <script>
-  GameCore.ensureGameOrRedirect("index.html");
-
-  function refresh(){
-    const s=GameCore.state;
-    document.getElementById("pName").textContent=s.name;
-    document.getElementById("pLvl").textContent=s.level;
-    document.getElementById("pGold").textContent=s.gold;
-    document.getElementById("barHpFill").style.width=(s.hp/s.hpMax*100)+"%";
-    document.getElementById("barHpText").textContent=`HP ${s.hp}/${s.hpMax}`;
-    document.getElementById("barManaFill").style.width=(s.mana/s.manaMax*100)+"%";
-    document.getElementById("barManaText").textContent=`Mana ${s.mana}/${s.manaMax}`;
-    document.getElementById("logBox").innerHTML=GameCore.logsHTML();
+GameCore.ensureGameOrRedirect('index.html');
+function render(){ document.getElementById('gold').textContent = GameCore.state.gold; }
+function buy(t){
+  if(t==='hp'){
+    if(GameCore.state.gold>=20){
+      GameCore.state.gold-=20;
+      GameCore.state.hp=Math.min(GameCore.state.hpMax, GameCore.state.hp+Math.floor(GameCore.state.hpMax*0.6));
+      GameCore.log('Acheté une potion de vie.');
+    } else alert('Pas assez d\'or.');
   }
-  function buy(cost, ok){
-    const s=GameCore.state;
-    if(s.gold<cost){ GameCore.log("Pas assez d’or."); refresh(); return; }
-    s.gold-=cost; ok(); GameCore.save(); refresh();
+  if(t==='mana'){
+    if(GameCore.state.gold>=15){
+      GameCore.state.gold-=15;
+      GameCore.state.mana=Math.min(GameCore.state.manaMax, GameCore.state.mana+Math.floor(GameCore.state.manaMax*0.6));
+      GameCore.log('Acheté une potion de mana.');
+    } else alert('Pas assez d\'or.');
   }
-  function buyHP(){ buy(20, ()=>{
-    const s=GameCore.state; const heal=Math.floor(s.hpMax*0.35);
-    s.hp=Math.min(s.hpMax, s.hp+heal); GameCore.log(`🧪 +${heal} PV.`);
-  });}
-  function buyMana(){ buy(20, ()=>{
-    const s=GameCore.state; const gain=Math.floor(s.manaMax*0.35);
-    s.mana=Math.min(s.manaMax, s.mana+gain); GameCore.log(`🔮 +${gain} Mana.`);
-  });}
-  function buyCharm(){ buy(120, ()=>{
-    const ilvl = Loot.rollIlvl({source:"shop"});
-    const req  = Loot.requiredLevel(ilvl,"magique");
-    const charm={name:"Charme porte-bonheur",slot:"ring",rarity:"magique",atk:0,def:0,crit:0,mf:5,str:0,dex:0,vit:0,ene:0, ilvl, reqLvl:req};
-    GameCore.state.inventory ||= []; GameCore.state.inventory.push(charm);
-    GameCore.log(`🍀 Charme (ilvl ${ilvl}, Req Nv ${req}) ajouté à l’inventaire.`);
-  });}
-  refresh();
+  if(t==='charm'){
+    if(GameCore.state.gold>=100){
+      GameCore.state.gold-=100;
+      GameCore.state.inventory.push({id:'charm_'+Date.now(),name:'Petit charme de chance',slot:'charm',rarity:'magique',ilvl:1,reqLvl:1,atk:0,def:0,crit:0,mf:5,str:0,dex:0,vit:0,ene:0});
+      GameCore.log('Vous obtenez un petit charme (+5% MF).');
+    } else alert('Pas assez d\'or.');
+  }
+  GameCore.save(); render();
+}
+render();
 </script>
-
 </body>
 </html>

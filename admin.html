@@ -29,7 +29,6 @@
 </header>
 
 <main class="wrap">
-  <!-- Connexion -->
   <section id="loginBox" class="card">
     <h2>Connexion</h2>
     <div class="grid">
@@ -43,10 +42,8 @@
     <p class="muted small" style="margin-top:8px">Mot de passe par défaut : <b>admin</b>.</p>
   </section>
 
-  <!-- Panneau admin -->
   <section id="adminPanel" class="card" style="display:none">
     <h2>Paramètres du jeu</h2>
-
     <div class="grid">
       <label>XP Rate (%)</label>
       <input type="number" id="xpRate" min="10" max="500" step="10">
@@ -57,13 +54,11 @@
       <label>Magic Find bonus (%)</label>
       <input type="number" id="mfRate" min="0" max="1000" step="10">
     </div>
-
     <h3 style="margin-top:14px">Mot de passe</h3>
     <div class="grid">
       <label>Nouveau mot de passe</label>
       <input type="password" id="newPass" placeholder="Changer le mot de passe">
     </div>
-
     <div class="row" style="margin-top:12px">
       <button class="btn primary" onclick="Admin.save()">💾 Sauvegarder</button>
       <button class="btn" onclick="Admin.reset()">♻️ Réinitialiser</button>
@@ -73,7 +68,7 @@
   </section>
 </main>
 
-<script src="js/core.js"></script>
+<script src="js/core.v3.js"></script>
 <script src="js/admin.js"></script>
 </body>
 </html>

@@ -2,40 +2,43 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <title>Idle ARPG — Classement</title>
   <link rel="stylesheet" href="css/style.css"/>
 </head>
 <body class="bg">
-
 <header class="topbar">
-  <h1>Idle ARPG — Classement</h1>
+  <h1>Classement</h1>
   <nav>
-    <a href="index.html">Création</a>
+    <a href="index.html">Sélection</a>
     <a href="game.html">Combat</a>
     <a href="inventory.html">Inventaire</a>
     <a href="shop.html">Campement</a>
     <a href="journal.html">Journal</a>
     <a href="ladder.html" class="active">Classement</a>
+    <a href="admin.html">Admin</a>
   </nav>
 </header>
 
-<main class="panel">
-  <h3>Échelle locale</h3>
-  <table class="table">
-    <thead><tr><th>#</th><th>Nom</th><th>Niveau</th><th>XP courant</th></tr></thead>
-    <tbody id="ladderBody"></tbody>
-  </table>
+<main class="columns">
+  <section class="panel">
+    <h2>Top local (1 perso)</h2>
+    <div id="ladder"></div>
+  </section>
 </main>
 
-<script src="js/core.js"></script>
+<script src="js/core.v3.js"></script>
 <script>
-  GameCore.ensureGameOrRedirect("index.html");
-  const body=document.getElementById("ladderBody");
-  const rows=GameCore.getLadder().map((e,i)=>`
-    <tr><td>${i+1}</td><td>${e.name}</td><td>${e.level}</td><td>${e.xp}</td></tr>
-  `).join("");
-  body.innerHTML=rows||`<tr><td colspan="4">Aucun score pour l’instant.</td></tr>`;
+GameCore.load();
+function render(){
+  if(!GameCore.state){
+    document.getElementById('ladder').innerHTML='<div class="muted">Aucun personnage.</div>'; return;
+  }
+  const s=GameCore.state;
+  document.getElementById('ladder').innerHTML =
+    `<div><b>${s.name}</b> — Nv ${s.level}, XP ${s.xp}/${GameCore.xpTable[s.level]||'—'}, Or ${s.gold}</div>`;
+}
+render();
 </script>
 </body>
 </html>

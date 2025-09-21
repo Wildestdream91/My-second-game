@@ -2,33 +2,36 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <title>Idle ARPG — Journal</title>
   <link rel="stylesheet" href="css/style.css"/>
 </head>
 <body class="bg">
-
 <header class="topbar">
-  <h1>Idle ARPG — Journal</h1>
+  <h1>Journal</h1>
   <nav>
-    <a href="index.html">Création</a>
+    <a href="index.html">Sélection</a>
     <a href="game.html">Combat</a>
     <a href="inventory.html">Inventaire</a>
     <a href="shop.html">Campement</a>
     <a href="journal.html" class="active">Journal</a>
     <a href="ladder.html">Classement</a>
+    <a href="admin.html">Admin</a>
   </nav>
 </header>
 
-<main class="panel">
-  <h3>Historique</h3>
-  <div id="logBox" class="logBox tall"></div>
+<main class="columns">
+  <section class="panel" style="grid-column:1/-1">
+    <h2>Historique</h2>
+    <div class="logBox" id="logBox"></div>
+  </section>
 </main>
 
-<script src="js/core.js"></script>
+<script src="js/core.v3.js"></script>
 <script>
-  GameCore.ensureGameOrRedirect("index.html");
-  document.getElementById("logBox").innerHTML = GameCore.logsHTML();
+GameCore.ensureGameOrRedirect('index.html');
+function render(){ document.getElementById('logBox').innerHTML = GameCore.logsHTML(); }
+render(); setInterval(render,1000);
 </script>
 </body>
 </html>
