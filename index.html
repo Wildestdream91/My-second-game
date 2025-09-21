@@ -27,7 +27,9 @@
       <input id="pName" type="text" placeholder="Ton pseudo..."/>
     </label>
     <button class="btn primary" onclick="create()">Créer</button>
-    <div class="muted small" style="margin-top:8px">La partie est sauvegardée dans ton navigateur (localStorage).</div>
+    <div class="muted small" style="margin-top:8px">
+      La partie est sauvegardée dans ton navigateur (localStorage).
+    </div>
   </section>
 </main>
 
@@ -37,23 +39,25 @@ function create(){
   const n=document.getElementById("pName").value.trim();
   if(!n){ alert("Choisis un pseudo."); return; }
 
-  // crée & tente la sauvegarde
+  // crée et tente la sauvegarde
   GameCore.newGame(n);
 
-  // vérifie que la sauvegarde existe bien
+  // vérifie que la sauvegarde a bien été écrite
   const raw = localStorage.getItem("idleARPG_state");
   if(!raw){
     alert("⚠️ Sauvegarde impossible. Autorise le stockage local pour ce site.");
     return;
   }
-  try{
-    JSON.parse(raw);
-  }catch(e){
-    alert("⚠️ Sauvegarde corrompue, on réinitialise.");
+
+  // test de relecture
+  try{ JSON.parse(raw); }
+  catch(e){
+    alert("⚠️ Sauvegarde corrompue. On réinitialise…");
     localStorage.removeItem("idleARPG_state");
     return;
   }
-  // ok → go jeu
+
+  // ok → on part au jeu
   location.href="game.html";
 }
 </script>
