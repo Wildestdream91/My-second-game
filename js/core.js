@@ -1,28 +1,41 @@
-/* ======================
-   core.js : gestion état (robuste)
-   - Difficultés: Normal / Cauchemar / Enfer
-   - Déblocage: battre Baal dans la diff courante
-   - Sauvegarde/chargement blindés + getConfig()
-   ====================== */
-const GameCore={
-  state:null,
+const GameCore = {
+  state: null,
+  xpTable: Array.from({length:100}, (_,i)=> Math.floor(50 * Math.pow(i+1,1.5)) ),
 
-  // ---- Base I/O ----
+  // ---- Création d’un nouveau jeu ----
+  newGame(name){
+    this.state = {
+      name,
+      cls:"Aventurier",
+      level:1, xp:0, gold:0,
+      hp:50, hpMax:50, mana:20, manaMax:20,
+      str:5, dex:5, vit:5, ene:5,
+      statPts:0,
+      equipment:{},
+      inventory:[],
+      currentAct:1,
+      currentZone:"1-1",
+      difficulty:"Normal",
+      logs:[]
+    };
+    this.save();
+  },
+
+  // ---- Sauvegarde / chargement ----
   save(){
     try{
       localStorage.setItem("idleARPG_state", JSON.stringify(this.state));
-      // vérification immédiate
       const back = localStorage.getItem("idleARPG_state");
       if(!back) throw new Error("write_check_failed");
     }catch(e){
-      alert("⚠️ Impossible d’enregistrer la partie (localStorage). Active le stockage local pour ce site.");
+      alert("⚠️ Impossible d’enregistrer la partie (localStorage).");
       console.error("Save error:", e);
     }
   },
   load(){
     try{
       const raw = localStorage.getItem("idleARPG_state");
-      if(!raw){ this.state=null; return null; }
+      if(!raw) return (this.state=null);
       this.state = JSON.parse(raw);
       return this.state;
     }catch(e){
@@ -33,113 +46,65 @@ const GameCore={
     }
   },
   ensureGameOrRedirect(url){
-    const ok = this.load();
+    const ok=this.load();
     if(!ok){
       console.warn("No game state found, redirecting to", url);
-      location.href = url;
+      location.href=url;
     }
-  },
-
-  // 👉 Admin config (XP/Or/Drop/MF)
-  getConfig(){ 
-    try{ return JSON.parse(localStorage.getItem("idleARPG_config")||"{}"); }
-    catch{ return {}; }
-  },
-
-  // ---- Init / new game ----
-  newGame(name, cls="Aventurier"){
-    this.state={
-      name, cls,
-      level:1, xp:0, gold:0,
-      str:5,dex:5,vit:5,ene:5, statPts:5,
-      hpMax:50, hp:50, manaMax:20, mana:20,
-      inventory:[], equipment:{head:null,amulet:null,weapon:null,chest:null,shield:null,ring:null},
-      logs:[],
-      // difficultés (gating)
-      difficulty:"Normal",
-      progress:{
-        "Normal":   { bossesDefeated:{}, actReached:1 },
-        "Cauchemar":{ bossesDefeated:{}, actReached:1, locked:true },
-        "Enfer":    { bossesDefeated:{}, actReached:1, locked:true }
-      },
-      // position
-      currentAct:1,
-      currentZone:"a1-rogue-encampment"
-    };
-    this.recalcVitals(true);
-    this.save();
   },
 
   // ---- Logs ----
   log(msg){
-    if(!this.state?.logs) return;
+    if(!this.state.logs) this.state.logs=[];
     this.state.logs.unshift(`[${new Date().toLocaleTimeString()}] ${msg}`);
-    this.state.logs=this.state.logs.slice(0,120);
+    this.state.logs = this.state.logs.slice(0,100);
     this.save();
   },
-  logsHTML(){ return (this.state?.logs||[]).map(l=>`<div>${l}</div>`).join(""); },
-
-  // ---- Stats / dérivés ----
-  equipBonus(){const o={str:0,dex:0,vit:0,ene:0,atk:0,def:0,crit:0,mf:0};
-    const eq=this.state?.equipment||{}; for(const k in eq){const it=eq[k]; if(!it) continue; for(const s in o)o[s]+=(it[s]||0);} return o;},
-  effStr(){return (this.state?.str||0)+this.equipBonus().str;},
-  effDex(){return (this.state?.dex||0)+this.equipBonus().dex;},
-  effVit(){return (this.state?.vit||0)+this.equipBonus().vit;},
-  effEne(){return (this.state?.ene||0)+this.equipBonus().ene;},
-  atkTotal(){return (this.effStr()||0)+(this.state?.level||0)+this.equipBonus().atk;},
-  defTotal(){return Math.floor(this.effDex())+Math.floor((this.state?.level||0)/2)+this.equipBonus().def;},
-  critTotal(){return Math.floor((this.effDex()||0)/2)+this.equipBonus().crit;},
-  mfTotal(){return this.equipBonus().mf;},
-  recalcVitals(full=false){
-    const s=this.state; if(!s) return;
-    s.hpMax=50+this.effVit()*5; s.manaMax=20+this.effEne()*3;
-    if(full){s.hp=s.hpMax; s.mana=s.manaMax;} else { if(s.hp>s.hpMax)s.hp=s.hpMax; if(s.mana>s.manaMax)s.mana=s.manaMax; }
+  logsHTML(){
+    return (this.state.logs||[]).map(l=>`<div>${l}</div>`).join("");
   },
+
+  // ---- Stats dérivées ----
+  effStr(){ return this.state.str; },
+  effDex(){ return this.state.dex; },
+  effVit(){ return this.state.vit; },
+  effEne(){ return this.state.ene; },
+
+  atkTotal(){ return this.effStr() + this.state.level; },
+  defTotal(){ return this.effDex() + Math.floor(this.state.level/2); },
+  critTotal(){ return Math.floor(this.effDex()/2); },
+  mfTotal(){ return 0; },
+
+  // ---- Utilitaires XP ----
+  grantXP(amount){
+    const s=this.state;
+    s.xp += amount;
+    let need=this.xpTable[s.level];
+    while(s.xp>=need){
+      s.xp -= need;
+      s.level++;
+      s.statPts += 5;
+      s.hpMax += 10; s.hp = s.hpMax;
+      s.manaMax += 5; s.mana = s.manaMax;
+      this.log(`Niveau ${s.level} atteint !`);
+      need=this.xpTable[s.level]||Infinity;
+    }
+    this.save();
+  },
+
+  // ---- Points de caractéristiques ----
   spendStatPoint(stat){
-    const s=this.state; if(!s || s.statPts<=0) return;
-    if(!["str","dex","vit","ene"].includes(stat)) return;
-    s[stat]++; s.statPts--; this.recalcVitals(false); this.save();
-  },
-
-  // ---- XP table & gain ----
-  xpTable:(()=>{ const arr=[0]; for(let i=1;i<=99;i++){ const base = i<=20 ? Math.pow(i,1.85)*70 : i<=60 ? Math.pow(i,1.98)*85 : Math.pow(i,2.12)*100; arr[i] = Math.floor(base);} return arr; })(),
-  addXP(raw){
-    const s=this.state; if(!s) return;
-    s.xp += Math.max(0, Math.floor(raw));
-    while(s.level<99 && s.xp>=this.xpTable[s.level]){
-      s.xp -= this.xpTable[s.level]; s.level++; s.statPts+=5;
-      this.log(`🎉 Niveau ${s.level} (+5 pts)`);
-      this.recalcVitals(true);
-    }
+    const s=this.state;
+    if(s.statPts<=0) return;
+    s[stat]++; s.statPts--;
     this.save();
   },
-  addGold(a){ this.state.gold += Math.max(0,Math.floor(a||0)); this.save(); },
 
-  // ---- Difficulté & progression ----
-  getDifficulty(){ return this.state?.difficulty || "Normal"; },
-  isDifficultyUnlocked(diff){
-    if(diff==="Normal") return true;
-    return !this.state?.progress?.[diff]?.locked;
+  // ---- Config Admin ----
+  getConfig(){
+    try{
+      return JSON.parse(localStorage.getItem("idleARPG_config")||"{}");
+    }catch(e){ return {}; }
   },
-  setDifficulty(diff){
-    if(!["Normal","Cauchemar","Enfer"].includes(diff)) return false;
-    if(!this.isDifficultyUnlocked(diff)){ this.log(`⛔ Difficulté ${diff} verrouillée.`); return false; }
-    this.state.difficulty = diff;
-    this.state.currentAct = 1;
-    this.state.currentZone = "a1-rogue-encampment";
-    this.save();
-    this.log(`🗡️ Difficulté: ${diff}`);
-    return true;
-  },
-  onBossDefeated(bossId){
-    const diff=this.getDifficulty();
-    const p = this.state.progress[diff];
-    p.bossesDefeated[bossId]=true; this.save();
-    this.log(`🏆 Boss vaincu (${bossId}) en ${diff}`);
-    if(bossId==="baal"){
-      if(diff==="Normal"   && this.state.progress["Cauchemar"].locked){ this.state.progress["Cauchemar"].locked=false; this.log("🔓 Cauchemar débloqué !"); }
-      if(diff==="Cauchemar"&& this.state.progress["Enfer"].locked){ this.state.progress["Enfer"].locked=false; this.log("🔓 Enfer débloqué !"); }
-      this.save();
-    }
-  }
+  getDifficulty(){ return this.state?.difficulty || "Normal"; }
 };
