@@ -20,30 +20,51 @@
   </nav>
 </header>
 
+<!-- Carte des actes -->
 <div id="actMap" class="actMap"></div>
 
 <main class="columns">
+  <!-- Colonne gauche : joueur + actions -->
   <section class="panel">
+    <!-- Stats joueur -->
     <div class="heroStats">
-      <div><b id="pName">—</b> (Lv <span id="pLvl">1</span>) — <span id="pClass"></span></div>
-      <div>FOR <span id="pStr">0</span> — DEX <span id="pDex">0</span> — VIT <span id="pVit">0</span> — ÉNE <span id="pEne">0</span></div>
-      <div>ATQ <span id="pAtk">0</span> — DEF <span id="pDef">0</span> — Crit <span id="pCrit">0</span>% | MF <span id="pMF">0</span>% | Or <span id="pGold">0</span></div>
+      <div>
+        <b id="pName">—</b> (Lv <span id="pLvl">1</span>) — <span id="pClass"></span>
+      </div>
+      <div>
+        FOR <span id="pStr">0</span> — DEX <span id="pDex">0</span> — VIT <span id="pVit">0</span> — ÉNE <span id="pEne">0</span>
+      </div>
+      <div>
+        ATQ <span id="pAtk">0</span> — DEF <span id="pDef">0</span> — Crit <span id="pCrit">0</span>% | MF <span id="pMF">0</span>% | Or <span id="pGold">0</span>
+      </div>
       <div class="bars">
-        <div class="bar hp"><div class="bar-fill" id="barHpFill"></div><div class="bar-text" id="barHpText">HP 0/0</div></div>
-        <div class="bar mana"><div class="bar-fill" id="barManaFill"></div><div class="bar-text" id="barManaText">Mana 0/0</div></div>
-        <div class="bar xp"><div class="bar-fill" id="barXpFill"></div><div class="bar-text" id="barXpText">XP 0/0</div></div>
+        <div class="bar hp">
+          <div class="bar-fill" id="barHpFill"></div>
+          <div class="bar-text" id="barHpText">HP 0/0</div>
+        </div>
+        <div class="bar mana">
+          <div class="bar-fill" id="barManaFill"></div>
+          <div class="bar-text" id="barManaText">Mana 0/0</div>
+        </div>
+        <div class="bar xp">
+          <div class="bar-fill" id="barXpFill"></div>
+          <div class="bar-text" id="barXpText">XP 0/0</div>
+        </div>
       </div>
     </div>
 
+    <!-- Sélecteurs de zone / difficulté / auto -->
     <div class="zoneRow">
       <label>Zone :
         <select id="zoneSelect"></select>
       </label>
       <button id="newEncounter" class="btn">Nouvelle rencontre</button>
+
       <label class="switch">
         <input id="autoToggle" type="checkbox"/>
         <span>Auto-combat</span>
       </label>
+
       <label>Diff :
         <select id="diffSelect">
           <option>Facile</option>
@@ -54,7 +75,7 @@
       </label>
     </div>
 
-    <!-- Runs XP -->
+    <!-- Runs XP (persistants) -->
     <div class="panel" style="margin-top:10px">
       <h3>Runs XP (style D2)</h3>
       <div id="runsButtons" class="btnRow"></div>
@@ -62,6 +83,7 @@
       <button id="runsStop" class="btn danger" style="margin-top:8px" disabled>Stopper le run</button>
     </div>
 
+    <!-- Carte ennemi + actions combat -->
     <div class="enemyCard" id="enemyCard" hidden>
       <div><b id="eName">—</b> (Lv <span id="eLvl">1</span>)</div>
       <div>HP: <span id="eHP">0</span>/<span id="eHPmax">0</span> | DEF: <span id="eDef">—</span> | Dégâts: <span id="eDice">—</span></div>
@@ -75,6 +97,7 @@
     <div id="actLore" class="lore"></div>
   </section>
 
+  <!-- Colonne droite : journal -->
   <aside class="panel log">
     <h3>Journal</h3>
     <div id="logBox" class="logBox"></div>
@@ -83,36 +106,45 @@
 
 <footer class="footnote">Battez les boss pour débloquer les actes. La difficulté est sauvegardée.</footer>
 
+<!-- Scripts -->
 <script src="js/core.js"></script>
 <script src="js/loot.js"></script>
 <script src="js/combat.js"></script>
 <script src="js/runs.js"></script>
 <script>
+  // Bloque l’accès si pas de perso
   GameCore.ensureGameOrRedirect("index.html");
 
+  // Rendu rapide du joueur (nom, classe, niveau)
   function renderPlayer(){
-    const s=GameCore.state;
-    document.getElementById("pName").textContent=s.name;
-    document.getElementById("pLvl").textContent=s.level;
-    document.getElementById("pClass").textContent=s.cls;
+    const s = GameCore.state;
+    document.getElementById("pName").textContent  = s.name;
+    document.getElementById("pLvl").textContent   = s.level;
+    document.getElementById("pClass").textContent = s.cls;
     GameCore.uiRefreshStatsIfPresent();
-    document.getElementById("logBox").innerHTML=GameCore.logsHTML();
+    // Le journal est auto-live via GameCore.updateAllLogs()
   }
 
+  // Init combat (actes, zones, boutons)
   Combat.initUI(renderPlayer);
 
+  // Applique difficulté sauvegardée + listener
   (function initDifficulty(){
-    const sel=document.getElementById("diffSelect");
-    sel.value=GameCore.state.difficulty||"Normal";
-    sel.onchange=()=>{
-      GameCore.state.difficulty=sel.value; GameCore.save();
+    const sel = document.getElementById("diffSelect");
+    sel.value = GameCore.state.difficulty || "Normal";
+    sel.onchange = ()=>{
+      GameCore.state.difficulty = sel.value;
+      GameCore.save();
       GameCore.log(`⚙️ Difficulté: ${sel.value}`);
-      document.getElementById("logBox").innerHTML=GameCore.logsHTML();
     };
   })();
 
+  // Runs persistants : reprise + UI (même si on change de page)
+  Runs.bootstrap();
   Runs.initUI();
-  setInterval(()=>GameCore.uiRefreshStatsIfPresent(),600);
+
+  // Petites MAJ périodiques des barres (sécurité)
+  setInterval(()=>GameCore.uiRefreshStatsIfPresent(), 600);
 </script>
 </body>
 </html>
