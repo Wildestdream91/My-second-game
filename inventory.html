@@ -2,16 +2,15 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <title>Idle ARPG — Inventaire</title>
   <link rel="stylesheet" href="css/style.css"/>
 </head>
 <body class="bg">
-
 <header class="topbar">
-  <h1>Idle ARPG — Inventaire</h1>
+  <h1>Inventaire</h1>
   <nav>
-    <a href="index.html">Création</a>
+    <a href="index.html">Sélection</a>
     <a href="game.html">Combat</a>
     <a href="inventory.html" class="active">Inventaire</a>
     <a href="shop.html">Campement</a>
@@ -22,49 +21,24 @@
 
 <main class="columns">
   <section class="panel">
-    <h3>Équipement</h3>
+    <h2>Équipement</h2>
     <div id="equipList" class="equipList"></div>
-
-    <h3>Inventaire</h3>
-    <div id="inventoryGrid" class="invList"></div>
   </section>
 
-  <aside class="panel">
-    <h3>Caractéristiques</h3>
-    <div id="charStats" class="statsBox">—</div>
-    <div class="statSpend">
-      <p>Points d’attribut : <b id="ptsAttr">0</b></p>
-      <div class="btnRow">
-        <button class="btn" onclick="spend('str')">+ FOR</button>
-        <button class="btn" onclick="spend('dex')">+ DEX</button>
-        <button class="btn" onclick="spend('vit')">+ VIT</button>
-        <button class="btn" onclick="spend('ene')">+ ÉNE</button>
-      </div>
-    </div>
-    <h3>Journal</h3>
-    <div id="logBox" class="logBox"></div>
-  </aside>
+  <section class="panel">
+    <h2>Inventaire</h2>
+    <div id="inventoryGrid" class="invList"></div>
+  </section>
 </main>
 
 <script src="js/core.js"></script>
 <script src="js/loot.js"></script>
 <script>
   GameCore.ensureGameOrRedirect("index.html");
-
-  function spend(stat){
-    GameCore.spendStatPoint(stat);
-    updateUI(); Loot.renderInventory();
-  }
-  function updateUI(){
-    document.getElementById("ptsAttr").textContent=GameCore.state.statPts;
-    GameCore.uiRefreshStatsIfPresent();
-    document.getElementById("charStats").innerHTML=
-      `ATQ ${GameCore.atkTotal()} • DEF ${GameCore.defTotal()} • Crit ${GameCore.critTotal()}% • MF ${GameCore.mfTotal()}%`;
-    document.getElementById("logBox").innerHTML=GameCore.logsHTML();
-  }
-
+  // premier rendu
   Loot.renderInventory();
-  updateUI();
+  // rafraîchit périodiquement au cas où d’autres pages modifient la save
+  setInterval(()=>Loot.renderInventory(), 2000);
 </script>
 </body>
 </html>
