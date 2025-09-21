@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin - Idle Diablo</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .wrap{max-width:880px;margin:24px auto;padding:0 12px}
+    .card{background:#121215;border:1px solid #232327;border-radius:10px;padding:14px;margin:14px 0}
+    .grid{display:grid;grid-template-columns:220px 1fr;gap:10px;align-items:center}
+    input[type="number"],input[type="password"]{background:#0e0e10;color:#e6e6e6;border:1px solid #232327;border-radius:8px;padding:10px}
+    .muted{color:#a4a4a4}
+    .row{display:flex;gap:8px;flex-wrap:wrap}
+  </style>
+</head>
+<body class="bg">
+<header class="topbar">
+  <h1>⚙️ Admin Panel</h1>
+  <nav>
+    <a href="index.html">Sélection</a>
+    <a href="game.html">Combat</a>
+    <a href="inventory.html">Inventaire</a>
+    <a href="shop.html">Campement</a>
+    <a href="journal.html">Journal</a>
+    <a href="ladder.html">Classement</a>
+    <a href="admin.html" class="active">Admin</a>
+  </nav>
+</header>
+
+<main class="wrap">
+  <!-- Connexion -->
+  <section id="loginBox" class="card">
+    <h2>Connexion</h2>
+    <div class="grid">
+      <label for="adminPass">Mot de passe</label>
+      <input type="password" id="adminPass" placeholder="••••••••">
+    </div>
+    <div class="row" style="margin-top:10px">
+      <button class="btn primary" onclick="Admin.checkPass()">Se connecter</button>
+      <span id="loginMsg" class="muted"></span>
+    </div>
+    <p class="muted small" style="margin-top:8px">Mot de passe par défaut : <b>admin</b>.</p>
+  </section>
+
+  <!-- Panneau admin -->
+  <section id="adminPanel" class="card" style="display:none">
+    <h2>Paramètres du jeu</h2>
+
+    <div class="grid">
+      <label>XP Rate (%)</label>
+      <input type="number" id="xpRate" min="10" max="500" step="10">
+      <label>Gold Rate (%)</label>
+      <input type="number" id="goldRate" min="10" max="500" step="10">
+      <label>Drop Rate (%)</label>
+      <input type="number" id="dropRate" min="10" max="500" step="10">
+      <label>Magic Find bonus (%)</label>
+      <input type="number" id="mfRate" min="0" max="1000" step="10">
+    </div>
+
+    <h3 style="margin-top:14px">Mot de passe</h3>
+    <div class="grid">
+      <label>Nouveau mot de passe</label>
+      <input type="password" id="newPass" placeholder="Changer le mot de passe">
+    </div>
+
+    <div class="row" style="margin-top:12px">
+      <button class="btn primary" onclick="Admin.save()">💾 Sauvegarder</button>
+      <button class="btn" onclick="Admin.reset()">♻️ Réinitialiser</button>
+      <button class="btn" onclick="Admin.changePass()">🔒 Mettre à jour le mot de passe</button>
+      <span id="saveMsg" class="muted"></span>
+    </div>
+  </section>
+</main>
+
+<script src="js/core.js"></script>
+<script src="js/admin.js"></script>
+</body>
+</html>
