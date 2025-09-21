@@ -1,9 +1,8 @@
 /* ==========================================
-   Idle ARPG v7.4 FR - core.js
+   Idle ARPG v7.5 FR - core.js
    ========================================== */
 
-// ----- Réglage XP global -----
-const XP_RATE = 10.0; // Multiplie tous les gains d’XP par 2
+const XP_RATE = 2.0; // multiplicateur XP global
 
 const GameCore={
   state:{},
@@ -14,23 +13,28 @@ const GameCore={
     st.str=5; st.dex=5; st.vit=5; st.ene=5; st.statPts=5;
     st.inventory=[]; st.equipment={head:null,amulet:null,weapon:null,chest:null,shield:null,ring:null};
     st.hpMax=1; st.hp=1; st.manaMax=1; st.mana=1;
-    st.bossesDefeated={}; st.zone=null; st.logs=[]; st.difficulty="Normal";
+    st.bossesDefeated={}; st.zone=null; st.logs=[];
+    st.difficulty="Normal";
+    st.tasks=[]; // <<--- contiendra toutes les tâches persistantes (runs, regen, craft…)
     this.state=st; this.recalcVitals(true); this.save();
   },
   save(){localStorage.setItem("idleARPGsave",JSON.stringify(this.state));},
   load(){
-    try{const raw=localStorage.getItem("idleARPGsave");
-      if(raw){this.state=JSON.parse(raw);
+    try{
+      const raw=localStorage.getItem("idleARPGsave");
+      if(raw){
+        this.state=JSON.parse(raw);
         const eq=this.state.equipment||{};
         for(const s of ["head","amulet","weapon","chest","shield","ring"]) if(!(s in eq)) eq[s]=null;
         this.state.equipment=eq;
         if(!this.state.difficulty) this.state.difficulty="Normal";
+        if(!this.state.tasks) this.state.tasks=[];
       } else this.state={created:false};
     }catch(e){console.warn("Load err",e);this.state={created:false};}
   },
   reset(f=false){if(f||confirm("Effacer la sauvegarde ?")){localStorage.removeItem("idleARPGsave");location.reload();}},
 
-  // Courbe d’XP plus douce
+  // XP table (adoucie)
   xpTable:(()=>{ 
     const arr=[0];
     for(let i=1;i<=99;i++){
@@ -42,16 +46,16 @@ const GameCore={
     return arr;
   })(),
 
-  // Gain d’XP (boosté)
   gainXP(amount){
-    const add = Math.max(0, Math.floor((amount||0) * XP_RATE)); // XP boost global
+    const add = Math.max(0, Math.floor((amount||0) * XP_RATE));
     this.state.xp += add;
+    this.log(`📈 +${add} XP (taux x${XP_RATE})`);
     while(this.state.level<99 && this.state.xp>=this.xpTable[this.state.level]){
       this.state.xp -= this.xpTable[this.state.level];
       this.state.level++;
       this.state.statPts += 5;
-      this.log(`🎉 Niveau ${this.state.level} atteint ! (+5 pts attribut)`);
-      this.recalcVitals(true); // up -> heal
+      this.log(`🎉 Niveau ${this.state.level} atteint ! (+5 pts)`);
+      this.recalcVitals(true);
     }
     this.save();
   },
@@ -72,8 +76,22 @@ const GameCore={
     if(full){s.hp=s.hpMax;s.mana=s.manaMax;} else {if(s.hp>s.hpMax)s.hp=s.hpMax;if(s.mana>s.manaMax)s.mana=s.manaMax;} this.save();},
   spendStatPoint(stat){if(this.state.statPts<=0)return; if(!["str","dex","vit","ene"].includes(stat))return;
     this.state[stat]++; this.state.statPts--; this.recalcVitals(false); this.save();},
-  log(m){this.state.logs.unshift(m); if(this.state.logs.length>100)this.state.logs.pop(); this.save();},
+
+  // Journal auto-live
+  _updateLogsScheduled:false,
+  log(m){this.state.logs.unshift(m); if(this.state.logs.length>100)this.state.logs.pop(); this.save(); this.updateAllLogs();},
   logsHTML(){return this.state.logs.map(l=>`<div>${l}</div>`).join("");},
+  updateAllLogs(){
+    if(this._updateLogsScheduled) return;
+    this._updateLogsScheduled=true;
+    const doUpdate=()=>{
+      this._updateLogsScheduled=false;
+      const html=this.logsHTML();
+      document.querySelectorAll('.logBox').forEach(el=>{el.innerHTML=html;});
+    };
+    if(typeof requestAnimationFrame==="function") requestAnimationFrame(doUpdate); else setTimeout(doUpdate,0);
+  },
+
   ensureGameOrRedirect(t){if(!this.state.created)location.href=t;},
   uiRefreshStatsIfPresent(){const s=this.state, set=(id,t)=>{const el=document.getElementById(id); if(el) el.textContent=t;},
     setW=(id,v)=>{const el=document.getElementById(id); if(el) el.style.width=v+"%";};
@@ -83,4 +101,18 @@ const GameCore={
     setW("barManaFill",s.mana/s.manaMax*100); set("barManaText",`Mana ${s.mana}/${s.manaMax}`);
     setW("barXpFill",s.xp/(this.xpTable[s.level]||1)*100); set("barXpText",`XP ${s.xp}/${this.xpTable[s.level]}`);}
 };
+
 GameCore.load();
+
+// Cross-onglet sync journal et stats
+try{
+  window.addEventListener('storage',(e)=>{
+    if(e.key==="idleARPGsave"){
+      GameCore.load();
+      GameCore.updateAllLogs();
+      GameCore.uiRefreshStatsIfPresent?.();
+    }
+  });
+}catch(_){}
+
+document.addEventListener('DOMContentLoaded',()=>{ GameCore.updateAllLogs(); });
