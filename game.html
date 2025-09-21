@@ -87,7 +87,6 @@
 <script src="js/combat.js"></script>
 
 <script>
-// UI init
 GameCore.ensureGameOrRedirect("index.html");
 
 function refreshBasics(){
@@ -126,11 +125,26 @@ function buildMapSelectors(){
   selA.onchange=()=>{ GameCore.state.currentAct=parseInt(selA.value); fillZones(); };
   selZ.onchange=()=>{ GameCore.state.currentZone=selZ.value; GameCore.save(); };
   fillZones();
-  document.getElementById('btnGo').onclick=()=>{ GameCore.save(); location.reload(); };
+  document.getElementById('btnGo').onclick=()=>{ 
+    GameCore.save(); 
+    Combat.spawn(true); // force respawn à la demande
+    refreshBasics();
+  };
+}
+
+function hookEnemyCardActions(){
+  // Délégation (marche même après re-render)
+  const card = document.getElementById('enemyCard');
+  card.addEventListener('click',(e)=>{
+    const id = e.target?.id;
+    if(id==='btnAttack'){ Combat.attackOnce(); }
+    if(id==='btnAuto'){ Combat.toggleAuto(); }
+  });
 }
 
 refreshBasics();
 buildMapSelectors();
+hookEnemyCardActions();
 setInterval(refreshBasics,1000);
 
 // Bandeau debug live
@@ -157,6 +171,9 @@ setInterval(refreshBasics,1000);
   }
   refresh(); setInterval(refresh,1000);
 })();
+
+// Premier spawn sûr après init UI
+setTimeout(()=>{ Combat.spawn(false); }, 50);
 </script>
 </body>
 </html>
