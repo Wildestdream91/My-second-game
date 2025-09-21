@@ -2,12 +2,13 @@
    core.js — Cœur du Idle Diablo-like
    Gère : état global, persistance, classes, XP, stats,
           équipements, logs et progression.
+   Avec migration auto pour anciennes sauvegardes.
    =================================================== */
 
 const GameCore = {
   state: null,
 
-  // ---- Table XP (style Diablo 2, un peu adoucie) ----
+  // ---- Table XP (style Diablo 2, adoucie) ----
   xpTable: (() => {
     const arr = [0];
     for (let i = 1; i <= 99; i++) {
@@ -37,6 +38,11 @@ const GameCore = {
       const raw = localStorage.getItem("idleARPG_state");
       if (!raw) { this.state = null; return null; }
       this.state = JSON.parse(raw);
+
+      // 👉 Migration + recalcul (répare les anciennes saves)
+      this.migrateState();
+      this.recalcVitals(false);
+
       return this.state;
     } catch (e) {
       console.error("Load error, clearing corrupted state:", e);
@@ -63,7 +69,7 @@ const GameCore = {
   // ---- Presets de classes (inspirés D2) ----
   classPresets: {
     "Barbare":       { str: 9, dex: 4, vit: 7, ene: 3, hp: 60, mana: 18 },
-    "Sorcieres":     { str: 3, dex: 5, vit: 4, ene: 11, hp: 42, mana: 28 },
+    "Sorcieres":     { str: 3, dex: 5, vit: 4, ene: 11, hp: 42, mana: 28 }, // (sans accent pour simplicité)
     "Paladin":       { str: 7, dex: 6, vit: 6, ene: 4, hp: 56, mana: 20 },
     "Necromancien":  { str: 3, dex: 5, vit: 5, ene: 10, hp: 45, mana: 26 },
     "Amazone":       { str: 5, dex: 9, vit: 5, ene: 4, hp: 50, mana: 22 },
@@ -71,11 +77,60 @@ const GameCore = {
     "Druide":        { str: 6, dex: 4, vit: 7, ene: 5, hp: 58, mana: 21 }
   },
 
+  // ---- Migration : normalise & complète l’état chargé ----
+  migrateState() {
+    const s = this.state || {};
+
+    // Normalisation nom de classe (accents/variantes)
+    const mapClass = { "Sorcieres": "Sorcieres", "Sorcières": "Sorcieres" };
+    s.cls = mapClass[s.cls] || s.cls || "Barbare";
+
+    // Valeurs minimales sûres
+    s.name     = s.name || "Héros";
+    s.level    = Number.isFinite(s.level) ? s.level : 1;
+    s.xp       = Number.isFinite(s.xp)    ? s.xp    : 0;
+    s.gold     = Number.isFinite(s.gold)  ? s.gold  : 0;
+    s.statPts  = Number.isFinite(s.statPts) ? s.statPts : 5;
+
+    // Caractéristiques
+    const preset = this.classPresets[s.cls] || this.classPresets["Barbare"];
+    s.str = Number.isFinite(s.str) ? s.str : preset.str;
+    s.dex = Number.isFinite(s.dex) ? s.dex : preset.dex;
+    s.vit = Number.isFinite(s.vit) ? s.vit : preset.vit;
+    s.ene = Number.isFinite(s.ene) ? s.ene : preset.ene;
+
+    // Équipement / inventaire
+    s.equipment ||= { head: null, amulet: null, weapon: null, chest: null, shield: null, ring: null };
+    s.inventory ||= [];
+    s.logs      ||= [];
+
+    // Barres (seront recalculées)
+    if (!Number.isFinite(s.hpMax))   s.hpMax = preset.hp;
+    if (!Number.isFinite(s.hp))      s.hp    = s.hpMax;
+    if (!Number.isFinite(s.manaMax)) s.manaMax = preset.mana;
+    if (!Number.isFinite(s.mana))    s.mana    = s.manaMax;
+
+    // Progression/difficulté
+    s.difficulty = s.difficulty || "Normal";
+    s.progress ||= {
+      "Normal":    { bossesDefeated: {}, actReached: 1 },
+      "Cauchemar": { bossesDefeated: {}, actReached: 1, locked: true },
+      "Enfer":     { bossesDefeated: {}, actReached: 1, locked: true }
+    };
+    s.currentAct  = Number.isFinite(s.currentAct)  ? s.currentAct  : 1;
+    s.currentZone = s.currentZone || "a1-rogue-encampment";
+
+    this.state = s;
+  },
+
   // ---- Création d’un nouveau perso ----
   newGame(name, cls = "Barbare") {
-    const p = this.classPresets[cls] || this.classPresets["Barbare"];
+    const mapClass = { "Sorcieres": "Sorcieres", "Sorcières": "Sorcieres" };
+    const normCls = mapClass[cls] || cls;
+    const p = this.classPresets[normCls] || this.classPresets["Barbare"];
+
     this.state = {
-      name, cls,
+      name, cls: normCls,
       level: 1, xp: 0, gold: 0,
       str: p.str, dex: p.dex, vit: p.vit, ene: p.ene, statPts: 5,
       hpMax: p.hp, hp: p.hp,
@@ -96,7 +151,7 @@ const GameCore = {
     };
     this.recalcVitals(true);
     this.save();
-    this.log(`Création: ${name} (${cls}).`);
+    this.log(`Création: ${name} (${normCls}).`);
   },
 
   // ---- Logs ----
@@ -131,8 +186,10 @@ const GameCore = {
 
   recalcVitals(full = false) {
     const s = this.state; if (!s) return;
-    s.hpMax = (this.classPresets[s.cls]?.hp || 50) + this.effVit() * 5;
-    s.manaMax = (this.classPresets[s.cls]?.mana || 20) + this.effEne() * 3;
+    const baseHP   = (this.classPresets[s.cls]?.hp   || 50);
+    const baseMana = (this.classPresets[s.cls]?.mana || 20);
+    s.hpMax   = baseHP   + this.effVit() * 5;
+    s.manaMax = baseMana + this.effEne() * 3;
     if (full) { s.hp = s.hpMax; s.mana = s.manaMax; }
     else { if (s.hp > s.hpMax) s.hp = s.hpMax; if (s.mana > s.manaMax) s.mana = s.manaMax; }
   },
@@ -181,7 +238,7 @@ const GameCore = {
     p.bossesDefeated[bossId] = true; this.save();
     this.log(`🏆 Boss vaincu (${bossId}) en ${diff}`);
 
-    // Débloque les difficultés supérieures
+    // Débloque Cauchemar/Enfer en battant Baal
     if (bossId === "baal") {
       if (diff === "Normal" && this.state.progress["Cauchemar"].locked) {
         this.state.progress["Cauchemar"].locked = false;
