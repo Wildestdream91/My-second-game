@@ -9,9 +9,9 @@
 <body class="bg">
 
 <header class="topbar">
-  <h1>Idle ARPG — Campement</h1>
+  <h1>Campement</h1>
   <nav>
-    <a href="index.html">Création</a>
+    <a href="index.html">Sélection</a>
     <a href="game.html">Combat</a>
     <a href="inventory.html">Inventaire</a>
     <a href="shop.html" class="active">Campement</a>
@@ -21,46 +21,46 @@
 </header>
 
 <main class="columns">
+  <!-- Colonne gauche : Boutique -->
   <section class="panel">
-    <h3>Marchand</h3>
-    <div class="shopRow">
-      <div class="shopItem">
-        <div class="title">Potion de vie</div>
-        <div class="desc">Restaure 35% des PV max.</div>
-        <div class="price">20 or</div>
-        <button class="btn" onclick="buyHP()">Acheter</button>
-      </div>
-      <div class="shopItem">
-        <div class="title">Potion de mana</div>
-        <div class="desc">Restaure 35% du mana max.</div>
-        <div class="price">20 or</div>
-        <button class="btn" onclick="buyMana()">Acheter</button>
-      </div>
-      <div class="shopItem">
-        <div class="title">Idole de chance</div>
-        <div class="desc">+5% MF (équipez-la pour activer)</div>
-        <div class="price">120 or</div>
-        <button class="btn" onclick="buyCharm()">Acheter</button>
-      </div>
+    <h2>Boutique</h2>
+    <div class="grid">
+      <button class="btn" onclick="buyHP()">🧪 Potion de soin (20 or)</button>
+      <button class="btn" onclick="buyMana()">🔮 Potion de mana (20 or)</button>
+      <button class="btn" onclick="buyCharm()">🍀 Charme porte-bonheur (120 or)</button>
     </div>
+    <p class="muted small">Les potions restaurent 35% de vos PV/Mana max.  
+      Le charme donne +5% MF et a un ilvl basé sur votre niveau.</p>
   </section>
 
+  <!-- Colonne droite : Infos joueur + Journal -->
   <aside class="panel">
-    <h3>Héros</h3>
-    <div>Nom : <b id="pName">—</b> (Lv <span id="pLvl">1</span>)</div>
-    <div>Or : <b id="pGold">0</b></div>
-    <div class="bars small">
-      <div class="bar hp"><div class="bar-fill" id="barHpFill"></div><div class="bar-text" id="barHpText">HP 0/0</div></div>
-      <div class="bar mana"><div class="bar-fill" id="barManaFill"></div><div class="bar-text" id="barManaText">Mana 0/0</div></div>
+    <div>
+      <b id="pName">—</b> (Nv <span id="pLvl">1</span>)  
+      — Or: <span id="pGold">0</span>
+    </div>
+    <div class="bars">
+      <div class="bar hp">
+        <div class="bar-fill" id="barHpFill"></div>
+        <div class="bar-text" id="barHpText">HP 0/0</div>
+      </div>
+      <div class="bar mana">
+        <div class="bar-fill" id="barManaFill"></div>
+        <div class="bar-text" id="barManaText">Mana 0/0</div>
+      </div>
     </div>
     <h3>Journal</h3>
     <div id="logBox" class="logBox"></div>
-    <hr/>
-    <button class="btn danger" onclick="GameCore.reset(true)">Réinitialiser la sauvegarde</button>
   </aside>
 </main>
 
+<footer class="footnote">
+  Achetez potions et charmes pour renforcer vos chances !
+</footer>
+
+<!-- Scripts -->
 <script src="js/core.js"></script>
+<script src="js/loot.js"></script>
 <script>
   GameCore.ensureGameOrRedirect("index.html");
 
@@ -89,11 +89,13 @@
     s.mana=Math.min(s.manaMax, s.mana+gain); GameCore.log(`🔮 +${gain} Mana.`);
   });}
   function buyCharm(){ buy(120, ()=>{
-    const charm={name:"Charme porte-bonheur",slot:"ring",rarity:"magique",atk:0,def:0,crit:0,mf:5,str:0,dex:0,vit:0,ene:0};
+    const ilvl = Loot.rollIlvl({source:"shop"});
+    const charm={name:"Charme porte-bonheur",slot:"ring",rarity:"magique",atk:0,def:0,crit:0,mf:5,str:0,dex:0,vit:0,ene:0, ilvl};
     GameCore.state.inventory ||= []; GameCore.state.inventory.push(charm);
-    GameCore.log("🍀 Charme ajouté à l’inventaire.");
+    GameCore.log(`🍀 Charme (ilvl ${ilvl}) ajouté à l’inventaire.`);
   });}
   refresh();
 </script>
+
 </body>
 </html>
