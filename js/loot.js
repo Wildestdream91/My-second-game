@@ -41,20 +41,24 @@ const Loot={
   },
   sellPrice(r){ return r==="commun"?5 : r==="magique"?15 : r==="rare"?50 : r==="unique"?150 : 300; },
 
+  // ---------- utils ----------
   randInt(a,b){return Math.floor(Math.random()*(b-a+1))+a;},
   cap(s){return s.charAt(0).toUpperCase()+s.slice(1);},
 
+  // iLevel: basé sur source + petite variance
   rollIlvl(ctx){
+    // ctx: { enemyLevel?, act?, boss?, source?:"drop"|"shop" }
     const s = GameCore.state||{};
     let base = 1;
     if (ctx?.source==="shop")       base = s.level || 1;
     else if (ctx?.enemyLevel)       base = ctx.enemyLevel;
-    else if (ctx?.act)              base = ctx.act*6 + 3;
+    else if (ctx?.act)              base = ctx.act*6 + 3; // fallback
     else                            base = s.level || 1;
     const variance = this.randInt(-2, +3);
     return Math.max(1, base + variance);
   },
 
+  // Niveau requis à partir de l’ilvl et rareté (simplifié style D2)
   requiredLevel(ilvl, rarity){
     const base = Math.floor(ilvl * 0.8);
     const bonus =
@@ -66,6 +70,7 @@ const Loot={
     return Math.min(99, Math.max(1, base + bonus));
   },
 
+  // Tables de drop avec MF et bonus boss
   rollRarity(mf=0,ctx={boss:false}){
     const W=this.rarities.map(x=>({...x}));
     const mfF=Math.min(300,mf);
@@ -83,8 +88,9 @@ const Loot={
     return "commun";
   },
 
+  // Génère 0/1 loot
   generateLoot(mf=0, ctx={boss:false, act:1, enemyLevel:1}){
-    const baseDrop = ctx.boss ? 1.0 : 0.25;
+    const baseDrop = ctx.boss ? 1.0 : 0.25;  // boss drop garanti, sinon 25%
     if(Math.random()>baseDrop) return null;
 
     const rarity = this.rollRarity(mf, ctx);
@@ -106,6 +112,7 @@ const Loot={
       str:0,dex:0,vit:0,ene:0
     };
 
+    // + attributs aléatoires
     const extras=this.randInt(b.stats[0],b.stats[1]);
     for(let i=0;i<extras;i++){
       const k=["str","dex","vit","ene"][Math.floor(Math.random()*4)];
@@ -121,9 +128,99 @@ const Loot={
     return it;
   },
 
-  renderEquipBoard(){/* ... contenu complet comme avant ... */},
-  renderInventory(){/* ... contenu complet comme avant ... */},
-  equip(idx){/* ... contenu complet comme avant ... */},
-  unequip(slot){/* ... contenu complet comme avant ... */},
-  sell(idx){/* ... contenu complet comme avant ... */}
+  // ---------- Rendu UI ----------
+  renderEquipBoard(){
+    const list=document.getElementById("equipList"); if(!list) return; list.innerHTML="";
+    for(const s of this.slots){
+      const it=GameCore.state.equipment?.[s]||null;
+      const row=document.createElement("div");
+      if(it){
+        const rClass=this.rarityClass(it.rarity);
+        row.innerHTML=`
+          <b>${s.toUpperCase()}</b> —
+          <span class="r-name ${rClass}">${it.name}</span>
+          <span class="badge-ilvl">ilvl ${it.ilvl||1}</span>
+          <span class="muted">Req Nv ${it.reqLvl||1}</span>
+          <span class="muted">[ATQ+${it.atk} DEF+${it.def} Crit+${it.crit}% MF+${it.mf}% | FOR+${it.str} DEX+${it.dex} VIT+${it.vit} ÉNE+${it.ene}]</span>
+          <button class="btn" style="float:right">Retirer</button>`;
+        row.querySelector("button").onclick=()=>{this.unequip(s); this.renderInventory();};
+      } else {
+        row.innerHTML=`<b>${s.toUpperCase()}</b> — <span class="muted">—</span>`;
+      }
+      list.appendChild(row);
+    }
+  },
+
+  renderInventory(){
+    const grid=document.getElementById("inventoryGrid"); if(!grid) return; grid.innerHTML="";
+    (GameCore.state.inventory||[]).forEach((it,idx)=>{
+      const rClass=this.rarityClass(it.rarity);
+      const lvl = GameCore.state.level||1;
+      const canEquip = lvl >= (it.reqLvl||1);
+      const row=document.createElement("div");
+      row.innerHTML=`
+        <span class="r-name ${rClass}">${it.name}</span>
+        <span class="badge-ilvl">ilvl ${it.ilvl||1}</span>
+        <span class="muted">Req Nv ${it.reqLvl||1}</span>
+        <span class="muted">[${it.slot} | ATQ+${it.atk} DEF+${it.def} Crit+${it.crit}% MF+${it.mf}% | FOR+${it.str} DEX+${it.dex} VIT+${it.vit} ÉNE+${it.ene}]</span>
+        <span style="float:right;display:flex;gap:6px">
+          <button class="btn equipBtn"${canEquip?"":" disabled title='Niveau insuffisant'"}>Équiper</button>
+          <button class="btn sellBtn">Vendre</button>
+          <button class="btn dropBtn">Jeter</button>
+        </span>`;
+      const bEquip = row.querySelector(".equipBtn");
+      const bSell  = row.querySelector(".sellBtn");
+      const bDrop  = row.querySelector(".dropBtn");
+
+      bEquip.onclick=()=>{
+        if(!(GameCore.state.level >= (it.reqLvl||1))){
+          GameCore.log(`⛔ Niveau insuffisant (Req Nv ${it.reqLvl}).`);
+          return;
+        }
+        this.equip(idx); this.renderInventory();
+      };
+      bSell.onclick =()=>{this.sell(idx);  this.renderInventory();};
+      bDrop.onclick =()=>{GameCore.state.inventory.splice(idx,1); GameCore.save(); this.renderInventory();};
+
+      grid.appendChild(row);
+    });
+    this.renderEquipBoard();
+    GameCore.recalcVitals(false); GameCore.uiRefreshStatsIfPresent?.();
+    const st=document.getElementById("charStats"); if(st) st.innerHTML=
+      `ATQ ${GameCore.atkTotal()} • DEF ${GameCore.defTotal()} • Crit ${GameCore.critTotal()}% • MF ${GameCore.mfTotal()}%`;
+    const log=document.querySelector(".logBox"); if(log) log.innerHTML=GameCore.logsHTML();
+  },
+
+  // ---------- Actions inventaire ----------
+  equip(idx){
+    const it=GameCore.state.inventory?.[idx]; if(!it) return;
+    const lvl=GameCore.state.level||1;
+    if(lvl < (it.reqLvl||1)){
+      GameCore.log(`⛔ Niveau insuffisant (Req Nv ${it.reqLvl}).`);
+      return;
+    }
+    GameCore.state.equipment ||= {head:null,amulet:null,weapon:null,chest:null,shield:null,ring:null};
+    if(!(it.slot in GameCore.state.equipment)) GameCore.state.equipment[it.slot]=null;
+    const cur=GameCore.state.equipment[it.slot];
+    if(cur){
+      if(GameCore.state.inventory.length>=this.maxInv){GameCore.log("Inventaire plein."); return;}
+      GameCore.state.inventory.push(cur);
+    }
+    GameCore.state.equipment[it.slot]=it; GameCore.state.inventory.splice(idx,1);
+    GameCore.log(`🔧 Équipé: ${it.name} (ilvl ${it.ilvl}, Req Nv ${it.reqLvl})`);
+    GameCore.save(); GameCore.recalcVitals(false);
+  },
+
+  unequip(slot){
+    const it=GameCore.state.equipment?.[slot]; if(!it) return;
+    if((GameCore.state.inventory||[]).length>=this.maxInv){GameCore.log("Inventaire plein."); return;}
+    GameCore.state.inventory.push(it); GameCore.state.equipment[slot]=null;
+    GameCore.log(`🗃️ Retiré: ${it.name}`); GameCore.save(); GameCore.recalcVitals(false);
+  },
+
+  sell(idx){
+    const it=GameCore.state.inventory?.[idx]; if(!it) return;
+    const price=this.sellPrice(it.rarity); GameCore.state.gold+=price;
+    GameCore.state.inventory.splice(idx,1); GameCore.log(`💰 Vendu: ${it.name} pour ${price} or.`); GameCore.save();
+  }
 };
