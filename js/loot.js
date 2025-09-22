@@ -1,181 +1,159 @@
-/* loot.js — génération d’objets + UI inventaire/équipement */
-
-const Loot = (() => {
-  // Rareté & couleurs
-  const RARITIES = [
-    { key:"normal",  label:"Normal",  colorClass:"r-normal",  w:60, mfScale:0 },
-    { key:"magique", label:"Magique", colorClass:"r-magique", w:28, mfScale:1 },
-    { key:"rare",    label:"Rare",    colorClass:"r-rare",    w:9,  mfScale:1.2 },
-    { key:"set",     label:"Set",     colorClass:"r-set",     w:2,  mfScale:1.4 },
-    { key:"unique",  label:"Unique",  colorClass:"r-unique",  w:1,  mfScale:1.6 },
+/* loot.js — raretés, MF, drops et équipement basique */
+const Loot = (function(){
+  // Raretés et poids (avant MF / difficulté)
+  const RARITY = [
+    { key:"normal", name:"Normal",  cls:"r-normal",  weight:100 },
+    { key:"magic",  name:"Magique", cls:"r-magic",   weight:22  },
+    { key:"rare",   name:"Rare",    cls:"r-rare",    weight:6   },
+    { key:"set",    name:"Set",     cls:"r-set",     weight:2   },
+    { key:"unique", name:"Unique",  cls:"r-unique",  weight:1   },
   ];
 
-  const SLOTS = ["weapon","shield","head","amulet","ring","chest","charm"];
+  const SLOTS = ["arme","casque","armure","gants","bottes","anneau","amulette"];
 
-  function chooseRarity(mfBonus){
-    // pondération + impact MF
-    let pool=[]; for(const r of RARITIES){
-      const mult = r.mfScale? 1 + (mfBonus/100)*(r.mfScale*0.75) : 1;
-      const weight = Math.max(0.1, r.w / mult);
-      pool.push({r, weight});
-    }
-    let total=pool.reduce((a,b)=>a+b.weight,0);
-    let roll=Math.random()*total;
-    for(const p of pool){ if(roll<p.weight) return p.r; roll-=p.weight; }
-    return RARITIES[0];
-  }
+  // Génération d’un item simple
+  function genItem(z){
+    const s = GameCore.state;
+    const diff = Zones.getDifficultyScalars(GameCore.getDifficulty());
+    const cfg = GameCore.getConfig?.() || {};
 
-  function baseStatsForSlot(slot, ilvl, rarity){
-    // Stats minimes mais cohérentes
-    const scale = 1 + ilvl/10;
-    const bump = rarity.key==="magique"?1.2 : rarity.key==="rare"?1.5 : rarity.key==="set"?1.6 : rarity.key==="unique"?1.8 : 1;
-    const rnd=(a,b)=>Math.floor(a+Math.random()*(b-a+1));
-    let st={ atk:0, def:0, crit:0, mf:0, str:0, dex:0, vit:0, ene:0 };
-    if(slot==="weapon"){
-      st.atk = rnd(1,3)*Math.floor(scale*bump);
-      st.crit = rnd(0,2);
-    }else if(slot==="shield" || slot==="chest" || slot==="head"){
-      st.def = rnd(1,3)*Math.floor(scale*bump);
-    }else if(slot==="amulet" || slot==="ring"){
-      st.crit = rnd(0,3);
-      st.mf = rnd(0,10);
-    }else if(slot==="charm"){
-      st.mf = rnd(2,8);
-    }
-    // Petits bonus de caracs selon rareté
-    if(rarity.key!=="normal"){
-      st.str += rnd(0,2);
-      st.dex += rnd(0,2);
-      st.vit += rnd(0,2);
-      st.ene += rnd(0,2);
-    }
-    return st;
-  }
-
-  function makeItem(zone, playerLevel){
-    const cfg = GameCore.getConfig();
-    const diffScal = Zones.getDifficultyScalars(GameCore.getDifficulty());
-    const mfTotal = (GameCore.mfTotal?.()||0) + (diffScal.reward?.mfBonus||0) + (cfg.mfRate||0);
-    const rarity = chooseRarity(mfTotal);
-
-    const slot = SLOTS[Math.floor(Math.random()*SLOTS.length)];
-    const ilvl = Math.max(1, Math.floor((zone?.zl||1) * (1 + (["Cauchemar","Enfer"].includes(GameCore.getDifficulty())? 0.5:0))));
-    const reqLvl = Math.max(1, Math.min(99, Math.floor(ilvl * 0.8)));
-
-    const stats = baseStatsForSlot(slot, ilvl, rarity);
-    const id = `it_${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
-    const name = `${rarity.label} ${slot}`;
-    return { id, name, slot, rarity:rarity.key, ilvl, reqLvl, ...stats };
-  }
-
-  function rarityClass(r){ const rr=RARITIES.find(x=>x.key===r); return rr?rr.colorClass:"r-normal"; }
-
-  // ---- Rendu équipement + inventaire ----
-  function renderEquipment(){
-    const s=GameCore.state;
-    const el = document.getElementById("equipList"); if(!el) return;
-    const slots = ["weapon","shield","head","chest","amulet","ring","charm"];
-    el.innerHTML = slots.map(slot=>{
-      const it = s.equipment[slot];
-      if(!it){
-        return `<div class="equipSlot"><b>${slot.toUpperCase()}</b><div class="muted small">— vide —</div></div>`;
+    // Chances ajustées par MF et diff
+    const mf = Math.max(0, Math.min(500, (GameCore.mfTotal?.()||0) + (diff.mfBonus||0) + (cfg.mfRate||0)));
+    // On convertit MF en bonus sur les poids "haut de gamme"
+    const weights = RARITY.map(r=>{
+      let w = r.weight;
+      if(r.key!=="normal"){
+        w = Math.max(1, Math.floor(w * (1 + mf/250))); // MF améliore non-normal
       }
-      return `<div class="equipSlot">
-        <div class="item">
-          <div class="nm ${rarityClass(it.rarity)}">${it.name}
-            <span class="badge">ilvl ${it.ilvl}</span>
-          </div>
-          <div class="muted small">Req: niv ${it.reqLvl}</div>
-          <div class="small">
-            ${it.atk?`ATQ +${it.atk} `:""}${it.def?`DEF +${it.def} `:""}${it.crit?`Crit +${it.crit}% `:""}${it.mf?`MF +${it.mf}% `:""}
-            ${it.str?`FOR +${it.str} `:""}${it.dex?`DEX +${it.dex} `:""}${it.vit?`VIT +${it.vit} `:""}${it.ene?`ÉNE +${it.ene} `:""}
-          </div>
-          <div class="item-actions">
-            <button class="btn" onclick="Loot.unequip('${slot}')">Retirer</button>
-          </div>
-        </div>
-      </div>`;
-    }).join("");
-  }
-
-  function renderInventory(){
-    const s=GameCore.state;
-    const el = document.getElementById("inventoryGrid"); if(!el) return renderEquipment();
-    renderEquipment();
-    if(!s.inventory.length){ el.innerHTML = `<div class="muted">Inventaire vide.</div>`; return; }
-    el.innerHTML = s.inventory.map(it=>{
-      return `<div class="item">
-        <div class="nm ${rarityClass(it.rarity)}">${it.name}
-          <span class="badge">ilvl ${it.ilvl}</span>
-        </div>
-        <div class="muted small">Slot: ${it.slot} • Req niv ${it.reqLvl}</div>
-        <div class="small">
-          ${it.atk?`ATQ +${it.atk} `:""}${it.def?`DEF +${it.def} `:""}${it.crit?`Crit +${it.crit}% `:""}${it.mf?`MF +${it.mf}% `:""}
-          ${it.str?`FOR +${it.str} `:""}${it.dex?`DEX +${it.dex} `:""}${it.vit?`VIT +${it.vit} `:""}${it.ene?`ÉNE +${it.ene} `:""}
-        </div>
-        <div class="item-actions">
-          <button class="btn" onclick="Loot.tryEquip('${it.id}')">Équiper</button>
-          <button class="btn danger" onclick="Loot.sell('${it.id}')">Vendre</button>
-        </div>
-      </div>`;
-    }).join("");
-  }
-
-  function tryEquip(id){
-    const s=GameCore.state;
-    const it=s.inventory.find(x=>x.id===id); if(!it) return;
-    if(s.level < it.reqLvl){ alert(`Niveau requis ${it.reqLvl}`); return; }
-    const prev = s.equipment[it.slot];
-    // équiper
-    s.equipment[it.slot] = it;
-    // retirer de l'inventaire
-    s.inventory = s.inventory.filter(x=>x.id!==id);
-    // l'ancien (si existait) va en inventaire
-    if(prev) s.inventory.push(prev);
-    GameCore.log(`Équipé: ${it.name}`);
-    GameCore.recalcVitals(false);
-    GameCore.save();
-    renderInventory();
-  }
-
-  function unequip(slot){
-    const s=GameCore.state;
-    const it = s.equipment[slot]; if(!it) return;
-    s.inventory.push(it);
-    s.equipment[slot]=null;
-    GameCore.log(`Retiré: ${it.name}`);
-    GameCore.recalcVitals(false);
-    GameCore.save();
-    renderInventory();
-  }
-
-  function sell(id){
-    const s=GameCore.state;
-    const it=s.inventory.find(x=>x.id===id); if(!it) return;
-    const price = Math.max(1, Math.floor((it.ilvl || 1) * (["unique","set"].includes(it.rarity)? 6 : it.rarity==="rare"?4 : it.rarity==="magique"?3 : 2)));
-    s.gold += price;
-    s.inventory = s.inventory.filter(x=>x.id!==id);
-    GameCore.log(`Vendu ${it.name} (+${price} or)`);
-    GameCore.save();
-    renderInventory();
-  }
-
-  // ---- Drop (appelé par combat) ----
-  function rollDrop(zone){
-    // Table de chance de drop  — base par combat : ~35% en Normal
-    const cfg=GameCore.getConfig();
-    const diff=Zones.getDifficultyScalars(GameCore.getDifficulty());
-    const baseP = 0.35 * (diff.reward.drop||1) * ((cfg.dropRate||100)/100);
-    const p = Math.min(0.95, baseP);
-    if(Math.random()<=p){
-      const it = makeItem(zone, GameCore.state.level);
-      GameCore.state.inventory.push(it);
-      GameCore.log(`Objet trouvé : ${it.name} (ilvl ${it.ilvl})`);
-      GameCore.save();
-      return it;
+      return w;
+    });
+    const total = weights.reduce((a,b)=>a+b,0);
+    let roll = Math.random()*total;
+    let rarity = RARITY[0];
+    for(let i=0;i<RARITY.length;i++){
+      if(roll < weights[i]){ rarity = RARITY[i]; break; }
+      roll -= weights[i];
     }
-    return null;
+
+    // Slot et affixes très simples
+    const slot = SLOTS[Math.floor(Math.random()*SLOTS.length)];
+    const name = `${rarity.name} ${slot}`;
+    // affixes: petits bonus liés au niveau de zone
+    const zl = Math.max(1, (z?.zl||1));
+    const atk = (slot==="arme") ? Math.floor(1+zl*0.6+(rarity===RARITY[4]? zl*0.6 : 0)) : 0;
+    const def = (slot==="armure"||slot==="casque"||slot==="gants"||slot==="bottes") ? Math.floor(1+zl*0.4+(rarity===RARITY[3]? zl*0.5 : 0)) : 0;
+    const crit= (slot==="amulette"||slot==="anneau") ? Math.min(25, Math.floor(1+zl*0.15)) : 0;
+    const mfB = (slot==="amulette"||slot==="anneau") ? Math.min(20, Math.floor(1+zl*0.12)) : 0;
+
+    return {
+      id: "it_"+Date.now()+"_"+Math.floor(Math.random()*9999),
+      slot, rarity:rarity.key, rarityCls:rarity.cls, name,
+      atk, def, crit, mf: mfB,
+      zl
+    };
   }
 
-  return { renderInventory, tryEquip, unequip, sell, rollDrop };
+  // Probabilité de drop d’un objet (avant MF), ajustée par diff/config
+  function shouldDrop(z){
+    const diff = Zones.getDifficultyScalars(GameCore.getDifficulty());
+    const cfg  = GameCore.getConfig?.() || {};
+    const base = 0.18; // 18% base
+    const rate = (diff.reward.drop||1) * ((cfg.dropRate||100)/100);
+    const chance = Math.max(0.01, Math.min(0.95, base * rate));
+    return Math.random() < chance;
+  }
+
+  function addToInventory(item){
+    const s=GameCore.state;
+    s.inv = s.inv || [];
+    s.inv.push(item);
+    GameCore.save();
+  }
+
+  function equipBestAuto(item){ // optionnel: auto-equip si meilleur (simplifié)
+    const s=GameCore.state;
+    s.equip = s.equip || {};
+    const cur = s.equip[item.slot];
+    function score(it){
+      return (it?.atk||0)*2 + (it?.def||0)*1.5 + (it?.crit||0)*1.2 + (it?.mf||0)*0.6 + (it?.zl||0)*0.2;
+    }
+    if(!cur || score(item) > score(cur)){
+      s.equip[item.slot] = item;
+      GameCore.log(`🛡️ Équipé: ${item.name}`);
+    }
+    GameCore.save();
+  }
+
+  function renderInventoryList(containerId){
+    const wrap = document.getElementById(containerId||"invList");
+    if(!wrap) return;
+    const inv = (GameCore.state?.inv)||[];
+    wrap.innerHTML = inv.slice().reverse().map(it=>{
+      const line = [];
+      if(it.atk) line.push(`ATQ +${it.atk}`);
+      if(it.def) line.push(`DEF +${it.def}`);
+      if(it.crit) line.push(`CRIT +${it.crit}%`);
+      if(it.mf) line.push(`MF +${it.mf}%`);
+      return `<div class="item">
+        <div class="name ${it.rarityCls}">${it.name}</div>
+        <div class="muted small">Slot: ${it.slot} • ZL ${it.zl}</div>
+        <div>${line.join(" • ")||"<span class='muted'>—</span>"}</div>
+        <div class="item-actions">
+          <button class="btn" onclick="Loot.equipItem('${it.id}')">Équiper</button>
+          <button class="btn" onclick="Loot.dropItem('${it.id}')">Jeter</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function renderEquipment(containerId){
+    const wrap = document.getElementById(containerId||"equipList");
+    if(!wrap) return;
+    const eq = (GameCore.state?.equip)||{};
+    wrap.innerHTML = SLOTS.map(slot=>{
+      const it = eq[slot];
+      const name = it ? `<span class="${it.rarityCls}">${it.name}</span>` : `<span class="muted">—</span>`;
+      return `<div class="equipSlot">
+        <div><b>${slot[0].toUpperCase()+slot.slice(1)}</b></div>
+        <div>${name}</div>
+      </div>`;
+    }).join('');
+  }
+
+  function equipItem(id){
+    const s=GameCore.state; if(!s) return;
+    const it = (s.inv||[]).find(x=>x.id===id);
+    if(!it) return;
+    s.equip = s.equip || {};
+    s.equip[it.slot] = it;
+    GameCore.log(`🛡️ Équipé: ${it.name}`);
+    GameCore.save();
+    renderEquipment(); renderInventoryList();
+  }
+  function dropItem(id){
+    const s=GameCore.state; if(!s) return;
+    const i = (s.inv||[]).findIndex(x=>x.id===id);
+    if(i>=0){
+      const [it] = s.inv.splice(i,1);
+      GameCore.log(`🗑️ Jeté: ${it.name}`);
+      GameCore.save();
+      renderEquipment(); renderInventoryList();
+    }
+  }
+
+  function rollDrop(z){
+    if(!shouldDrop(z)) return;
+    const it = genItem(z);
+    addToInventory(it);
+    equipBestAuto(it); // qualité de vie: auto-équip si mieux
+  }
+
+  // Expose
+  return {
+    rollDrop,
+    renderInventoryList,
+    renderEquipment,
+    equipItem,
+    dropItem,
+  };
 })();

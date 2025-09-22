@@ -4,6 +4,13 @@
   let current = null;
   let interval = null;
 
+  function flash(selector, cls){
+    const el = document.querySelector(selector);
+    if(!el) return;
+    el.classList.add(cls);
+    setTimeout(()=>el.classList.remove(cls), 220);
+  }
+
   function ensureReady(){
     if (!window.GameCore || !GameCore.state) { console.warn("[Combat] GameCore/state manquant"); return false; }
     if (!window.Zones) { console.warn("[Combat] Zones manquant"); return false; }
@@ -17,7 +24,7 @@
     const s=GameCore.state;
     const z = Zones.getZone(s.currentZone) || { zl:1, baseXP:10, baseGold:5, nameFR:"Zone inconnue" };
     const diff = Zones.getDifficultyScalars(GameCore.getDifficulty());
-    const names = ["Décharné","Sombre rôdeur","Corrompu","Démon mineur","Esprit vengeur","Chauve-souris","Goule","Spectre","Fétiche","Guerrier déchu"];
+    const names = ["Décharné","Sombre rôdeur","Corrompu","Démon mineur","Chauve-souris","Goule","Spectre","Fétiche","Guerrier déchu"];
     const n = names[Math.floor(Math.random()*names.length)];
     const baseHP  = Math.max(12, z.zl*6);
     const baseDMG = Math.max(3, Math.floor(z.zl*0.8));
@@ -66,13 +73,14 @@
   function enemyAttackDamage(){
     const def = GameCore.defTotal ? GameCore.defTotal() : 0;
     let dmg = Math.max(1, current.dmg - Math.floor(def*0.25));
-    return Math.max(1, Math.floor(dmg * (0.85 + Math.random()*0.3)));
+    dmg = Math.max(1, Math.floor(dmg * (0.9 + Math.random()*0.2)));
+    return dmg;
   }
 
   function giveRewards(z){
-    const cfg=GameCore.getConfig?GameCore.getConfig():{};
-    const diff=Zones.getDifficultyScalars(GameCore.getDifficulty());
-    const xpGain = Math.max(1, Math.floor((z.baseXP||10) * (diff.reward.xp||1) * ((cfg.xpRate||100)/100)));
+    const diff = Zones.getDifficultyScalars(GameCore.getDifficulty());
+    const cfg  = GameCore.getConfig?.() || {};
+    const xpGain   = Math.max(1, Math.floor((z.baseXP||10) * (diff.reward.xp||1) * ((cfg.xpRate||100)/100)));
     const goldGain = Math.max(1, Math.floor((z.baseGold||5) * (diff.reward.gold||1) * ((cfg.goldRate||100)/100)));
     GameCore.addXP(xpGain); GameCore.addGold(goldGain);
     GameCore.log(`+${xpGain} XP, +${goldGain} or`);
@@ -94,9 +102,14 @@
   }
 
   function attackOnce(){
+    GameCore.initSFX && GameCore.initSFX();
     if(!current) return;
     const dmgP = playerAttackDamage();
     current.hp = Math.max(0, current.hp - dmgP);
+    GameCore.playSFX && GameCore.playSFX('hit');
+    // visuel
+    const selEnemyBar = '#enemyCard .hpbar';
+    flash(selEnemyBar, (dmgP>=Math.max(5, (current.dmg||1)*1.2)) ? 'crit' : 'hit');
     GameCore.log(`Vous infligez ${dmgP} dégâts.`);
     renderEnemy();
     if(checkDeath()) return;
@@ -104,6 +117,8 @@
     const dmgE = enemyAttackDamage();
     const s=GameCore.state;
     s.hp = Math.max(0, s.hp - dmgE);
+    // flash barre HP joueur
+    flash('.bar.hp', 'hit');
     GameCore.log(`Vous subissez ${dmgE} dégâts.`);
     if(s.hp<=0){
       GameCore.log(`💀 Vous tombez au combat ! -10% or, retour au camp.`);
@@ -120,18 +135,47 @@
   function toggleAuto(){
     if(interval){
       clearInterval(interval); interval=null;
+      localStorage.removeItem("idleARPG_auto");
       GameCore.log("Auto OFF");
       renderEnemy();
     }else{
       if(!current) spawn();
       interval = setInterval(attackOnce, 900);
+      localStorage.setItem("idleARPG_auto","1");
+      localStorage.setItem("idleARPG_lastTick", String(Date.now()));
       GameCore.log("Auto ON");
       renderEnemy();
     }
   }
 
+  function fastForward(ms){
+    const cap = Math.min(ms||0, 120000);
+    const steps = Math.floor(cap / 900);
+    if(steps <= 0) return;
+    if(!current) spawn();
+    for(let i=0;i<steps;i++){
+      attackOnce();
+      if(!current) spawn();
+    }
+  }
+
   // Expose
   window.Combat = { spawn, attackOnce, toggleAuto };
-  // Autospawn au chargement de game.html
-  document.addEventListener("DOMContentLoaded", ()=>{ if(document.getElementById("enemyCard")) spawn(); });
+  // Autospawn au chargement de game.html (+ reprise auto)
+  document.addEventListener("DOMContentLoaded", ()=>{
+    if(document.getElementById("enemyCard")) spawn();
+    const wasAuto = localStorage.getItem("idleARPG_auto")==="1";
+    const last = Number(localStorage.getItem("idleARPG_lastTick")||"0");
+    if(wasAuto && last>0){
+      const delta = Date.now() - last;
+      fastForward(delta);
+      if(!interval){
+        interval = setInterval(attackOnce, 900);
+        GameCore.log("Auto ON (repris)");
+      }
+    }
+    setInterval(()=>{
+      if(interval) localStorage.setItem("idleARPG_lastTick", String(Date.now()));
+    }, 3000);
+  });
 })();

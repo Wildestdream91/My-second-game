@@ -1,67 +1,41 @@
-/* admin.js — panneau admin (taux, MF, mot de passe) */
-const Admin = (() => {
-  const PASS_KEY = "idleARPG_adminPass";
-  const CONF_KEY = "idleARPG_config";
-  const DEFAULT_PASS = "admin";
-
-  function getPass(){ return localStorage.getItem(PASS_KEY) || DEFAULT_PASS; }
-  function setPass(p){ localStorage.setItem(PASS_KEY, p); }
-
-  function checkPass(){
-    const input = document.getElementById("adminPass").value;
-    if(input === getPass()){
-      document.getElementById("loginBox").style.display="none";
-      document.getElementById("adminPanel").style.display="block";
-      loadConfigToUI();
-      document.getElementById("loginMsg").textContent="";
-    }else{
-      document.getElementById("loginMsg").textContent="Mot de passe incorrect.";
-    }
-  }
-
-  function loadConfig(){
-    try{ return JSON.parse(localStorage.getItem(CONF_KEY) || "{}"); }
+/* admin.js — gestion des réglages (XP/Or/Drop/MF) */
+(function(){
+  function loadCfg(){
+    try{ return JSON.parse(localStorage.getItem("idleARPG_config")||"{}"); }
     catch{ return {}; }
   }
-  function saveConfig(cfg){
-    localStorage.setItem(CONF_KEY, JSON.stringify(cfg));
+  function saveCfg(cfg){
+    localStorage.setItem("idleARPG_config", JSON.stringify(cfg||{}));
   }
+  document.addEventListener("DOMContentLoaded", ()=>{
+    const cfg = loadCfg();
+    const elXp   = document.getElementById("cfgXp");
+    const elGold = document.getElementById("cfgGold");
+    const elDrop = document.getElementById("cfgDrop");
+    const elMF   = document.getElementById("cfgMF");
+    if(elXp)   elXp.value   = (cfg.xpRate   ?? 100);
+    if(elGold) elGold.value = (cfg.goldRate ?? 100);
+    if(elDrop) elDrop.value = (cfg.dropRate ?? 100);
+    if(elMF)   elMF.value   = (cfg.mfRate   ?? 0);
 
-  function loadConfigToUI(){
-    const cfg = loadConfig();
-    document.getElementById("xpRate").value   = cfg.xpRate   ?? 100;
-    document.getElementById("goldRate").value = cfg.goldRate ?? 100;
-    document.getElementById("dropRate").value = cfg.dropRate ?? 100;
-    document.getElementById("mfRate").value   = cfg.mfRate   ?? 0;
-  }
+    const btnSave = document.getElementById("btnSaveCfg");
+    const btnReset= document.getElementById("btnResetCfg");
 
-  function save(){
-    const cfg = {
-      xpRate:   Number(document.getElementById("xpRate").value),
-      goldRate: Number(document.getElementById("goldRate").value),
-      dropRate: Number(document.getElementById("dropRate").value),
-      mfRate:   Number(document.getElementById("mfRate").value)
+    if(btnSave) btnSave.onclick = ()=>{
+      const next = {
+        xpRate:   Math.max(10, Math.min(500, Number(elXp?.value || 100))),
+        goldRate: Math.max(10, Math.min(500, Number(elGold?.value || 100))),
+        dropRate: Math.max(10, Math.min(500, Number(elDrop?.value || 100))),
+        mfRate:   Math.max(0,  Math.min(100, Number(elMF?.value || 0))),
+      };
+      saveCfg(next);
+      alert("Réglages sauvegardés !");
     };
-    saveConfig(cfg);
-    document.getElementById("saveMsg").textContent = "Sauvegardé.";
-    setTimeout(()=>{ document.getElementById("saveMsg").textContent=""; }, 1500);
-  }
-
-  function reset(){
-    localStorage.removeItem(CONF_KEY);
-    loadConfigToUI();
-    document.getElementById("saveMsg").textContent = "Réinitialisé.";
-    setTimeout(()=>{ document.getElementById("saveMsg").textContent=""; }, 1500);
-  }
-
-  function changePass(){
-    const np = document.getElementById("newPass").value.trim();
-    if(!np){ alert("Entre un nouveau mot de passe."); return; }
-    setPass(np);
-    alert("Mot de passe mis à jour.");
-    document.getElementById("newPass").value="";
-  }
-
-  // Auto-show panel si déjà loggé (optionnel simple : on ne garde pas de session)
-  return { checkPass, save, reset, changePass };
+    if(btnReset) btnReset.onclick = ()=>{
+      if(!confirm("Réinitialiser les réglages ?")) return;
+      saveCfg({});
+      if(elXp) elXp.value=100; if(elGold) elGold.value=100; if(elDrop) elDrop.value=100; if(elMF) elMF.value=0;
+      alert("Réglages par défaut restaurés.");
+    };
+  });
 })();

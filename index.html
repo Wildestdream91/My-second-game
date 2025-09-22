@@ -8,15 +8,16 @@
 </head>
 <body class="bg">
 <header class="topbar">
-  <h1>Sélection de personnage</h1>
+  <h1>Idle Ladder Prototype</h1>
   <nav>
     <a href="index.html" class="active">Sélection</a>
     <a href="game.html">Combat</a>
     <a href="inventory.html">Inventaire</a>
     <a href="shop.html">Campement</a>
     <a href="journal.html">Journal</a>
-    <a href="ladder.html">Classement</a>
+    <!-- <a href="ladder.html">Classement</a> -->
     <a href="admin.html">Admin</a>
+    <button class="btn" onclick="GameCore.newGame()">Nouvelle partie</button>
   </nav>
 </header>
 
@@ -31,53 +32,48 @@
     <label style="display:block;margin-bottom:8px">Classe
       <select id="pClass">
         <option value="Barbare">Barbare</option>
-        <option value="Sorcieres">Sorcieres</option>
+        <option value="Sorcieres">Sorcière</option>
         <option value="Paladin">Paladin</option>
-        <option value="Necromancien">Necromancien</option>
+        <option value="Necromancien">Nécromancien</option>
         <option value="Amazone">Amazone</option>
         <option value="Assassin">Assassin</option>
         <option value="Druide">Druide</option>
       </select>
     </label>
 
-    <button class="btn primary" onclick="create()">Créer</button>
-    <div class="muted small" style="margin-top:8px">
-      La partie est sauvegardée dans ton navigateur (localStorage).
-    </div>
+    <button class="btn primary" id="btnCreate">Créer</button>
+  </section>
+
+  <section class="panel">
+    <h2>Reprendre une partie</h2>
+    <p class="muted">Si une sauvegarde est détectée, tu seras redirigé vers le combat.</p>
+    <button class="btn" id="btnResume">Reprendre</button>
   </section>
 </main>
 
 <script src="js/core.v3.js"></script>
 <script>
-// Si une partie existe déjà → aller directement au jeu
-(function autoRedirect(){
-  try{
-    const raw=localStorage.getItem("idleARPG_state");
-    if(raw){ const st=JSON.parse(raw); if(st && st.name){ location.href="game.html"; } }
-  }catch(_){}
+(function(){
+  document.getElementById('btnCreate').onclick = function(){
+    const name  = String(document.getElementById('pName').value||'').trim();
+    const klass = String(document.getElementById('pClass').value||'Barbare');
+    if(!name){ alert("Entre un pseudo"); return; }
+    if(!window.GameCore){ alert("Core manquant"); return; }
+    GameCore.createNewGame(name, klass);
+    location.href="game.html";
+  };
+  document.getElementById('btnResume').onclick = function(){
+    try{
+      const raw = localStorage.getItem("idleARPG_state");
+      if(!raw){ alert("Aucune sauvegarde trouvée."); return; }
+      JSON.parse(raw);
+      location.href="game.html";
+    }catch(e){
+      alert("⚠️ Sauvegarde corrompue. On réinitialise…");
+      localStorage.removeItem("idleARPG_state");
+    }
+  };
 })();
-
-function create(){
-  const n=document.getElementById("pName").value.trim();
-  const c=document.getElementById("pClass").value;
-  if(!n){ alert("Choisis un pseudo."); return; }
-
-  GameCore.newGame(n, c);
-
-  // Vérifie la sauvegarde
-  const raw = localStorage.getItem("idleARPG_state");
-  if(!raw){
-    alert("⚠️ Sauvegarde impossible. Autorise le stockage local pour ce site.");
-    return;
-  }
-  try{ JSON.parse(raw); }
-  catch(e){
-    alert("⚠️ Sauvegarde corrompue. On réinitialise…");
-    localStorage.removeItem("idleARPG_state");
-    return;
-  }
-  location.href="game.html";
-}
 </script>
 </body>
 </html>

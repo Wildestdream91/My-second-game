@@ -9,15 +9,16 @@
 <body class="bg">
 
 <header class="topbar">
-  <h1>Inventaire & Fiche perso</h1>
+  <h1>Idle Ladder Prototype</h1>
   <nav>
     <a href="index.html">Sélection</a>
     <a href="game.html">Combat</a>
     <a href="inventory.html" class="active">Inventaire</a>
     <a href="shop.html">Campement</a>
     <a href="journal.html">Journal</a>
-    <a href="ladder.html">Classement</a>
+    <!-- <a href="ladder.html">Classement</a> -->
     <a href="admin.html">Admin</a>
+    <button class="btn" onclick="GameCore.newGame()">Nouvelle partie</button>
   </nav>
 </header>
 
@@ -49,84 +50,68 @@
         <span class="muted">Points restants: <b id="cPts">0</b></span>
       </div>
       <div class="grid" style="grid-template-columns:repeat(2,minmax(160px,1fr));gap:8px">
-        <div>FOR <b id="cStr">0</b> <button class="btn" id="btnStr">+1</button></div>
-        <div>DEX <b id="cDex">0</b> <button class="btn" id="btnDex">+1</button></div>
-        <div>VIT <b id="cVit">0</b> <button class="btn" id="btnVit">+1</button></div>
-        <div>ÉNE <b id="cEne">0</b> <button class="btn" id="btnEne">+1</button></div>
+        <div>Force: <b id="cStr">0</b> <button class="btn" id="btnStr">+1</button></div>
+        <div>Dextérité: <b id="cDex">0</b> <button class="btn" id="btnDex">+1</button></div>
+        <div>Vitalité: <b id="cVit">0</b> <button class="btn" id="btnVit">+1</button></div>
+        <div>Énergie: <b id="cEne">0</b> <button class="btn" id="btnEne">+1</button></div>
       </div>
     </div>
-    <div class="statsBox" style="margin-top:10px">
-      <b>Statistiques dérivées</b>
-      <div class="grid" style="grid-template-columns:repeat(2,minmax(160px,1fr));gap:6px;margin-top:6px">
-        <div>ATQ totale: <b id="cAtk">0</b></div>
-        <div>DEF totale: <b id="cDef">0</b></div>
-        <div>Crit: <b id="cCrit">0</b>%</div>
-        <div>Magic Find: <b id="cMF">0</b>%</div>
-      </div>
-    </div>
-    <div class="panel" style="margin-top:12px">
-      <h3>Journal (aperçu)</h3>
-      <div class="logBox" id="logBox"></div>
-    </div>
+
+  <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap">
+    <button class="btn" onclick="GameCore.exportSave()">Exporter la sauvegarde</button>
+    <button class="btn" onclick="GameCore.importSave()">Importer une sauvegarde</button>
+  </div>
+
   </section>
 
   <section class="panel">
-    <h2>Équipement</h2>
-    <div id="equipList" class="equipList"></div>
-    <h2 style="margin:14px 0 10px">Inventaire</h2>
-    <div id="inventoryGrid" class="invList"></div>
+    <h2>Équipement & Inventaire</h2>
+    <div class="equipList" id="equipList"></div>
+    <h3 style="margin-top:10px">Inventaire</h3>
+    <div class="invList" id="invList"></div>
   </section>
 </main>
 
 <script src="js/core.v3.js"></script>
 <script src="js/loot.js"></script>
 <script>
+(function(){
   GameCore.ensureGameOrRedirect("index.html");
 
-  function refreshChar(){
-    const s = GameCore.state || {};
-    document.getElementById("cName").textContent  = s.name || "—";
-    document.getElementById("cClass").textContent = s.cls || "Aventurier";
-    document.getElementById("cLvl").textContent   = s.level || 1;
-    document.getElementById("cGold").textContent  = s.gold || 0;
-
-    const effStr = GameCore.effStr ? GameCore.effStr() : (s.str||0);
-    const effDex = GameCore.effDex ? GameCore.effDex() : (s.dex||0);
-    const effVit = GameCore.effVit ? GameCore.effVit() : (s.vit||0);
-    const effEne = GameCore.effEne ? GameCore.effEne() : (s.ene||0);
-    document.getElementById("cStr").textContent = effStr;
-    document.getElementById("cDex").textContent = effDex;
-    document.getElementById("cVit").textContent = effVit;
-    document.getElementById("cEne").textContent = effEne;
-    document.getElementById("cPts").textContent = s.statPts ?? 0;
-
-    document.getElementById("cAtk").textContent  = GameCore.atkTotal ? GameCore.atkTotal() : (effStr + (s.level||0));
-    document.getElementById("cDef").textContent  = GameCore.defTotal ? GameCore.defTotal() : Math.floor(effDex) + Math.floor((s.level||0)/2);
-    document.getElementById("cCrit").textContent = GameCore.critTotal ? GameCore.critTotal() : Math.floor(effDex/2);
-    document.getElementById("cMF").textContent   = GameCore.mfTotal ? GameCore.mfTotal() : 0;
-
-    const setW = (id,v)=>{ const el=document.getElementById(id); if(el) el.style.width=(v||0)+"%"; };
-    const setT = (id,t)=>{ const el=document.getElementById(id); if(el) el.textContent=t; };
-    if(s.hpMax){
-      setW("barHpFill", (s.hp/s.hpMax*100)); setT("barHpText", `HP ${s.hp}/${s.hpMax}`);
-    }
-    if(s.manaMax){
-      setW("barManaFill", (s.mana/s.manaMax*100)); setT("barManaText", `Mana ${s.mana}/${s.manaMax}`);
-    }
-    const need = GameCore.xpTable ? (GameCore.xpTable[s.level]||1) : 100;
-    setW("barXpFill", (s.xp/need*100)); setT("barXpText", `XP ${s.xp}/${need}`);
-
-    document.getElementById("logBox").innerHTML = GameCore.logsHTML ? GameCore.logsHTML() : "";
+  function sync(){
+    const s = GameCore.state;
+    document.getElementById('cName').textContent = s.name;
+    document.getElementById('cClass').textContent = s.klass;
+    document.getElementById('cLvl').textContent = s.level;
+    document.getElementById('cGold').textContent = s.gold;
+    // Bars
+    const hpPct = Math.max(0, Math.min(100, Math.round((s.hp/s.hpMax)*100)));
+    document.getElementById('barHpFill').style.width = hpPct+"%";
+    document.getElementById('barHpText').textContent = `HP ${s.hp}/${s.hpMax}`;
+    const mpPct = Math.max(0, Math.min(100, Math.round((s.mana/s.manaMax)*100)));
+    document.getElementById('barManaFill').style.width = mpPct+"%";
+    document.getElementById('barManaText').textContent = `Mana ${s.mana}/${s.manaMax}`;
+    const xpMax = GameCore.xpTable[s.level] || 1;
+    const xpPct = Math.max(0, Math.min(100, Math.round((s.xp/xpMax)*100)));
+    document.getElementById('barXpFill').style.width = xpPct+"%";
+    document.getElementById('barXpText').textContent = `XP ${s.xp}/${xpMax}`;
+    // Stats
+    document.getElementById('cPts').textContent = s.statPts;
+    document.getElementById('cStr').textContent = s.str;
+    document.getElementById('cDex').textContent = s.dex;
+    document.getElementById('cVit').textContent = s.vit;
+    document.getElementById('cEne').textContent = s.ene;
   }
-  function wireStatButtons(){
-    [["btnStr","str"],["btnDex","dex"],["btnVit","vit"],["btnEne","ene"]].forEach(([id,stat])=>{
-      const b=document.getElementById(id);
-      if(!b) return;
-      b.onclick=()=>{ GameCore.spendStatPoint(stat); refreshChar(); Loot.renderInventory(); };
-    });
-  }
-  refreshChar(); wireStatButtons(); Loot.renderInventory();
-  setInterval(()=>{ refreshChar(); }, 800);
+
+  ['Str','Dex','Vit','Ene'].forEach(k=>{
+    const id='btn'+k;
+    const stat = k.toLowerCase();
+    const el = document.getElementById(id);
+    if(el) el.onclick = ()=>{ GameCore.spendStatPoint(stat); sync(); };
+  });
+
+  sync();
+})();
 </script>
 </body>
 </html>

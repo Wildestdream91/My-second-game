@@ -8,59 +8,29 @@
 </head>
 <body class="bg">
 <header class="topbar">
-  <h1>Campement</h1>
+  <h1>Idle Ladder Prototype</h1>
   <nav>
     <a href="index.html">Sélection</a>
     <a href="game.html">Combat</a>
     <a href="inventory.html">Inventaire</a>
     <a href="shop.html" class="active">Campement</a>
     <a href="journal.html">Journal</a>
-    <a href="ladder.html">Classement</a>
+    <!-- <a href="ladder.html">Classement</a> -->
     <a href="admin.html">Admin</a>
+    <button class="btn" onclick="GameCore.newGame()">Nouvelle partie</button>
   </nav>
 </header>
 
 <main class="columns">
   <section class="panel">
-    <h2>Boutique</h2>
-    <div class="grid" style="grid-template-columns:1fr 1fr;gap:8px">
-      <button class="btn" onclick="buy('hp')">Potion de vie (20 or)</button>
-      <button class="btn" onclick="buy('mana')">Potion de mana (15 or)</button>
-      <button class="btn" onclick="buy('charm')">Petit charme MF +5% (100 or)</button>
-    </div>
-    <div class="muted" style="margin-top:8px">Or: <b id="gold">0</b></div>
+    <h2>Campement</h2>
+    <p class="muted">Boutique / soins / services à venir…</p>
   </section>
 </main>
 
 <script src="js/core.v3.js"></script>
 <script>
-GameCore.ensureGameOrRedirect('index.html');
-function render(){ document.getElementById('gold').textContent = GameCore.state.gold; }
-function buy(t){
-  if(t==='hp'){
-    if(GameCore.state.gold>=20){
-      GameCore.state.gold-=20;
-      GameCore.state.hp=Math.min(GameCore.state.hpMax, GameCore.state.hp+Math.floor(GameCore.state.hpMax*0.6));
-      GameCore.log('Acheté une potion de vie.');
-    } else alert('Pas assez d\'or.');
-  }
-  if(t==='mana'){
-    if(GameCore.state.gold>=15){
-      GameCore.state.gold-=15;
-      GameCore.state.mana=Math.min(GameCore.state.manaMax, GameCore.state.mana+Math.floor(GameCore.state.manaMax*0.6));
-      GameCore.log('Acheté une potion de mana.');
-    } else alert('Pas assez d\'or.');
-  }
-  if(t==='charm'){
-    if(GameCore.state.gold>=100){
-      GameCore.state.gold-=100;
-      GameCore.state.inventory.push({id:'charm_'+Date.now(),name:'Petit charme de chance',slot:'charm',rarity:'magique',ilvl:1,reqLvl:1,atk:0,def:0,crit:0,mf:5,str:0,dex:0,vit:0,ene:0});
-      GameCore.log('Vous obtenez un petit charme (+5% MF).');
-    } else alert('Pas assez d\'or.');
-  }
-  GameCore.save(); render();
-}
-render();
+(function(){ GameCore.ensureGameOrRedirect("index.html"); })();
 </script>
 </body>
 </html>

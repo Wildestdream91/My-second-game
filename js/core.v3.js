@@ -4,7 +4,7 @@ const GameCore = {
   state: null,
 
   // Table XP
-  xpTable: (() => { const arr=[0]; for(let i=1;i<=99;i++){ const base = i<=20?Math.pow(i,1.85)*70 : i<=60?Math.pow(i,1.98)*85 : Math.pow(i,2.12)*100; arr[i]=Math.floor(base);} return arr; })(),
+  xpTable: (() => { const arr=[0]; for(let i=1;i<=99;i++){ const base=Math.pow(i,2.12)*100; arr[i]=Math.floor(base);} return arr; })(),
 
   save(){
     try{
@@ -16,13 +16,51 @@ const GameCore = {
       console.error("Save error:", e);
     }
   },
+
+  log(msg){
+    if(!this.state) return;
+    const L = this.state.log || (this.state.log=[]);
+    L.push(`[${new Date().toLocaleTimeString()}] ${msg}`);
+    if(L.length>500) L.splice(0, L.length-500);
+    try{
+      const el = document.getElementById("log");
+      if(el) el.innerHTML = L.slice(-200).map(l=>`<div>${l}</div>`).join('');
+    }catch(_){}
+  },
+
+  migrateState(s){
+    // simple migration guard
+    if(!s.__version) s.__version = "v2";
+    s.__version = "v3";
+    return s;
+  },
+
+  createNewGame(name, klass){
+    const preset = (this.classPresets[klass] || this.classPresets['Barbare']);
+    this.state = {
+      __version:this.__version,
+      name, klass,
+      level:1, xp:0, gold:0,
+      str:preset.str, dex:preset.dex, vit:preset.vit, ene:preset.ene,
+      statPts:0,
+      hpMax:preset.hp, manaMax:preset.mana,
+      hp:preset.hp, mana:preset.mana,
+      currentZone:null,
+      inv:[], equip:{}, log:[],
+      progress:{ normal:{locked:false}, nightmare:{locked:true}, hell:{locked:true} }
+    };
+    this.save();
+  },
+
   load(){
     try{
       const raw = localStorage.getItem("idleARPG_state");
-      if(!raw){ this.state=null; console.warn("[GameCore] no state in LS"); return null; }
-      this.state = JSON.parse(raw);
-      this.migrateState();
-      this.recalcVitals(false);
+      if(!raw){ this.state=null; return null; }
+      const obj = JSON.parse(raw);
+      this.state = this.migrateState(obj);
+      if(!this.state.log) this.state.log=[];
+      if(typeof this.state.hp!=="number") this.state.hp = Math.max(1, this.state.hpMax||1);
+      if(typeof this.state.mana!=="number") this.state.mana = Math.max(0, this.state.manaMax||0);
       console.log("[GameCore] load ok", {version:this.__version, name:this.state.name, level:this.state.level});
       return this.state;
     }catch(e){
@@ -37,111 +75,64 @@ const GameCore = {
 
   classPresets:{
     "Barbare":       { str:9, dex:4, vit:7, ene:3, hp:60, mana:18 },
-    "Sorcieres":     { str:3, dex:5, vit:4, ene:11, hp:42, mana:28 },
-    "Paladin":       { str:7, dex:6, vit:6, ene:4, hp:56, mana:20 },
-    "Necromancien":  { str:3, dex:5, vit:5, ene:10, hp:45, mana:26 },
-    "Amazone":       { str:5, dex:9, vit:5, ene:4, hp:50, mana:22 },
-    "Assassin":      { str:6, dex:8, vit:5, ene:4, hp:50, mana:22 },
-    "Druide":        { str:6, dex:4, vit:7, ene:5, hp:58, mana:21 }
+    "Sorcieres":     { str:3, dex:5, vit:4, ene:11, hp:40, mana:34 },
+    "Paladin":       { str:7, dex:6, vit:7, ene:5, hp:55, mana:24 },
+    "Necromancien":  { str:3, dex:4, vit:5, ene:13, hp:42, mana:36 },
+    "Amazone":       { str:5, dex:9, vit:5, ene:6, hp:48, mana:26 },
+    "Assassin":      { str:6, dex:8, vit:5, ene:6, hp:48, mana:26 },
+    "Druide":        { str:6, dex:4, vit:8, ene:6, hp:58, mana:22 },
   },
 
-  migrateState(){
-    const s=this.state||{};
-    const mapClass={ "Sorcieres":"Sorcieres", "Sorcières":"Sorcieres" };
-    s.cls = mapClass[s.cls] || s.cls || "Barbare";
-
-    const preset=this.classPresets[s.cls] || this.classPresets["Barbare"];
-
-    s.name     = s.name || "Héros";
-    s.level    = Number.isFinite(s.level)?s.level:1;
-    s.xp       = Number.isFinite(s.xp)?s.xp:0;
-    s.gold     = Number.isFinite(s.gold)?s.gold:0;
-    s.statPts  = Number.isFinite(s.statPts)?s.statPts:5;
-
-    s.str = Number.isFinite(s.str)?s.str:preset.str;
-    s.dex = Number.isFinite(s.dex)?s.dex:preset.dex;
-    s.vit = Number.isFinite(s.vit)?s.vit:preset.vit;
-    s.ene = Number.isFinite(s.ene)?s.ene:preset.ene;
-
-    s.equipment ||= { head:null, amulet:null, weapon:null, chest:null, shield:null, ring:null };
-    s.inventory ||= [];
-    s.logs      ||= [];
-
-    if(!Number.isFinite(s.hpMax))   s.hpMax = preset.hp;
-    if(!Number.isFinite(s.hp))      s.hp    = s.hpMax;
-    if(!Number.isFinite(s.manaMax)) s.manaMax = preset.mana;
-    if(!Number.isFinite(s.mana))    s.mana    = s.manaMax;
-
-    s.difficulty = s.difficulty || "Normal";
-    s.progress ||= {
-      "Normal":    { bossesDefeated:{}, actReached:1 },
-      "Cauchemar": { bossesDefeated:{}, actReached:1, locked:true },
-      "Enfer":     { bossesDefeated:{}, actReached:1, locked:true }
-    };
-    s.currentAct  = Number.isFinite(s.currentAct)?s.currentAct:1;
-    s.currentZone = s.currentZone || "a1-rogue-encampment";
-
-    this.state=s;
+  atkTotal(){
+    const s=this.state;
+    const base = Math.floor(s.str*1.2 + s.dex*0.8 + s.level*0.6);
+    const eq = 0; // TODO: sum equipment
+    return base + eq;
   },
-
-  newGame(name, cls="Barbare"){
-    const mapClass={ "Sorcieres":"Sorcieres", "Sorcières":"Sorcieres" };
-    const normCls = mapClass[cls] || cls;
-    const p = this.classPresets[normCls] || this.classPresets["Barbare"];
-    this.state={
-      name, cls:normCls,
-      level:1, xp:0, gold:0,
-      str:p.str, dex:p.dex, vit:p.vit, ene:p.ene, statPts:5,
-      hpMax:p.hp, hp:p.hp, manaMax:p.mana, mana:p.mana,
-      equipment:{ head:null, amulet:null, weapon:null, chest:null, shield:null, ring:null },
-      inventory:[],
-      logs:[],
-      difficulty:"Normal",
-      progress:{
-        "Normal":   { bossesDefeated:{}, actReached:1 },
-        "Cauchemar":{ bossesDefeated:{}, actReached:1, locked:true },
-        "Enfer":    { bossesDefeated:{}, actReached:1, locked:true }
-      },
-      currentAct:1,
-      currentZone:"a1-rogue-encampment"
-    };
-    this.recalcVitals(true);
-    this.save();
-    this.log(`Création: ${name} (${normCls}).`);
+  defTotal(){
+    const s=this.state;
+    const base = Math.floor(s.dex*0.9 + s.vit*1.1 + s.level*0.4);
+    const eq = 0;
+    return base + eq;
   },
-
-  log(msg){ if(!this.state?.logs) return; this.state.logs.unshift(`[${new Date().toLocaleTimeString()}] ${msg}`); this.state.logs=this.state.logs.slice(0,120); this.save(); },
-  logsHTML(){ return (this.state?.logs||[]).map(l=>`<div>${l}</div>`).join(""); },
-
-  equipBonus(){ const o={str:0,dex:0,vit:0,ene:0,atk:0,def:0,crit:0,mf:0};
-    const eq=this.state?.equipment||{}; for(const k in eq){ const it=eq[k]; if(!it) continue; for(const s in o) o[s]+=(it[s]||0); }
-    return o;
+  critTotal(){
+    const s=this.state;
+    const base = Math.min(50, Math.floor(s.dex*0.3 + s.level*0.2));
+    const eq = 0;
+    return base + eq;
   },
-  effStr(){return (this.state?.str||0)+this.equipBonus().str;},
-  effDex(){return (this.state?.dex||0)+this.equipBonus().dex;},
-  effVit(){return (this.state?.vit||0)+this.equipBonus().vit;},
-  effEne(){return (this.state?.ene||0)+this.equipBonus().ene;},
-  atkTotal(){return this.effStr()+(this.state?.level||0)+this.equipBonus().atk;},
-  defTotal(){return Math.floor(this.effDex())+Math.floor((this.state?.level||0)/2)+this.equipBonus().def;},
-  critTotal(){return Math.floor((this.effDex()||0)/2)+this.equipBonus().crit;},
-  mfTotal(){return this.equipBonus().mf;},
+  mfTotal(){
+    const eq=0; const cfg=this.getConfig(); return (eq + (cfg.mfRate||0));
+  },
 
   recalcVitals(full=false){
-    const s=this.state; if(!s) return;
-    const baseHP=(this.classPresets[s.cls]?.hp||50);
-    const baseMana=(this.classPresets[s.cls]?.mana||20);
-    s.hpMax = baseHP + this.effVit()*5;
-    s.manaMax = baseMana + this.effEne()*3;
-    if(full){ s.hp=s.hpMax; s.mana=s.manaMax; }
-    else{ if(s.hp>s.hpMax) s.hp=s.hpMax; if(s.mana>s.manaMax) s.mana=s.manaMax; }
+    const s=this.state;
+    const bHp = 30 + s.vit*6 + s.level*5;
+    const bMp = 10 + s.ene*5 + s.level*3;
+    s.hpMax = bHp; s.manaMax = bMp;
+    if(full){ s.hp=s.hpMax; if(s.mana>s.manaMax) s.mana=s.manaMax; }
   },
 
   addXP(raw){
     const s=this.state; if(!s) return;
     s.xp += Math.max(0, Math.floor(raw));
+
+    let leveled = false;
     while(s.level<99 && s.xp>=this.xpTable[s.level]){
-      s.xp -= this.xpTable[s.level]; s.level++; s.statPts+=5;
-      this.log(`🎉 Niveau ${s.level} (+5 pts)`); this.recalcVitals(true);
+      s.xp -= this.xpTable[s.level]; 
+      s.level++; 
+      s.statPts+=5;
+      leveled = true;
+      this.log(`🎉 Niveau ${s.level} (+5 pts)`); 
+      this.recalcVitals(true);
+    }
+    if(leveled){
+      this.initSFX && this.initSFX(); 
+      this.playSFX && this.playSFX("level");
+      try{
+        const bar = document.querySelector('.bar.xp');
+        if(bar){ bar.classList.add('levelup'); setTimeout(()=>bar.classList.remove('levelup'), 500); }
+      }catch(_){}
     }
     this.save();
   },
@@ -150,24 +141,76 @@ const GameCore = {
   spendStatPoint(stat){
     const s=this.state; if(!s || s.statPts<=0) return;
     if(!["str","dex","vit","ene"].includes(stat)) return;
-    s[stat]++; s.statPts--; this.recalcVitals(false); this.save();
+    s[stat]++; s.statPts--; this.recalcVitals(); this.save();
   },
 
-  getDifficulty(){ return this.state?.difficulty || "Normal"; },
-  isDifficultyUnlocked(diff){ if(diff==="Normal") return true; return !this.state?.progress?.[diff]?.locked; },
-  setDifficulty(diff){
-    if(!["Normal","Cauchemar","Enfer"].includes(diff)) return false;
-    if(!this.isDifficultyUnlocked(diff)){ this.log(`⛔ Difficulté ${diff} verrouillée.`); return false; }
-    this.state.difficulty=diff; this.state.currentAct=1; this.state.currentZone="a1-rogue-encampment";
-    this.save(); this.log(`🗡️ Difficulté: ${diff}`); return true;
-  },
   onBossDefeated(bossId){
-    const diff=this.getDifficulty(); const p=this.state.progress[diff];
-    p.bossesDefeated[bossId]=true; this.save(); this.log(`🏆 Boss vaincu (${bossId}) en ${diff}`);
+    // exemple: débloquer difficultés
     if(bossId==="baal"){
-      if(diff==="Normal" && this.state.progress["Cauchemar"].locked){ this.state.progress["Cauchemar"].locked=false; this.log("🔓 Cauchemar débloqué !"); }
-      if(diff==="Cauchemar" && this.state.progress["Enfer"].locked){ this.state.progress["Enfer"].locked=false; this.log("🔓 Enfer débloqué !"); }
+      this.state.progress.nightmare.locked=false;
+      this.log("🌑 Cauchemar débloqué !");
       this.save();
     }
-  }
+  },
+
+  getDifficulty(){
+    // placeholder: toujours "Normal"
+    return "Normal";
+  },
+
+  /* === Reset propre === */
+  newGame(){
+    if (confirm("Supprimer la sauvegarde et recommencer ?")) {
+      localStorage.removeItem("idleARPG_state");
+      localStorage.removeItem("idleARPG_auto");
+      localStorage.removeItem("idleARPG_lastTick");
+      location.href = "index.html";
+    }
+  },
+
+  /* === Export / Import sauvegarde === */
+  exportSave(){
+    try{
+      const data = localStorage.getItem("idleARPG_state") || "{}";
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(data);
+        alert("Sauvegarde copiée dans le presse-papiers !");
+      } else {
+        throw new Error("no_clipboard");
+      }
+    }catch(e){
+      console.error(e);
+      alert("Impossible de copier automatiquement. Voici la sauvegarde :\n\n"+(localStorage.getItem("idleARPG_state")||"{}"));
+    }
+  },
+  importSave(){
+    const json = prompt("Collez la sauvegarde JSON :");
+    if(!json) return;
+    try{
+      const obj = JSON.parse(json);
+      localStorage.setItem("idleARPG_state", JSON.stringify(obj));
+      alert("Sauvegarde importée !");
+      location.reload();
+    }catch(e){
+      alert("Sauvegarde invalide.");
+    }
+  },
+
+  /* === SFX minimalistes === */
+  _sfx: null,
+  initSFX(){
+    if(this._sfx) return;
+    try{
+      this._sfx = {
+        hit:   new Audio("sfx/hit.mp3"),
+        level: new Audio("sfx/level.mp3")
+      };
+      this._sfx.hit.volume = this._sfx.level.volume = 0.2;
+    }catch(e){ console.warn("SFX off:", e); }
+  },
+  playSFX(key){
+    if(!this._sfx) return;
+    const a = this._sfx[key];
+    if(a){ try{ a.currentTime = 0; a.play(); }catch(_){} }
+  },
 };

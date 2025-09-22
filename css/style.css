@@ -15,12 +15,33 @@
 
 *{box-sizing:border-box}
 html,body{height:100%}
-body.bg{
-  margin:0;
-  background: radial-gradient(1200px 800px at 20% -10%, #17171c 0%, #0b0b0d 60%) fixed,
-              url('') no-repeat center/cover;
-  color:var(--text);
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif;
+body{
+  margin:0; background:radial-gradient(1200px 600px at 50% -20%, #1b1b22 0%, #0b0b0d 45%, #0b0b0d 100%);
+  color:var(--text); font-family: system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol";
+}
+
+/* ====== Liens / petits styles ====== */
+a { color:#9ecbff; }
+.muted{ color:var(--muted); }
+.small{ font-size:12px; }
+.bg{ background:radial-gradient(1200px 600px at 50% -20%, #1b1b22 0%, #0b0b0d 45%, #0b0b0d 100%); }
+
+/* ====== Boutons ====== */
+.btn{
+  background:#2b2b33; color:#eaeaea; border:1px solid #3b3b44; border-radius:10px;
+  padding:8px 12px; cursor:pointer; transition:.15s ease background,color,border;
+}
+.btn:hover{ background:#35353f; }
+.btn.primary{ background:linear-gradient(180deg,#2c2c31,#1d1d21); border-color:#474750; box-shadow: inset 0 1px 0 rgba(255,255,255,.05); }
+.btn.primary:hover{ background:#2a2a30; }
+
+/* ====== Grilles / panels ====== */
+.columns{
+  display:grid; grid-template-columns: 1fr 1fr; gap:16px; align-items:start; padding:14px; max-width:1100px; margin:0 auto;
+}
+.panel{
+  background:linear-gradient(180deg, rgba(24,24,28,.95) 0%, rgba(14,14,18,.95) 100%);
+  border:1px solid var(--bord); border-radius:12px; padding:14px; box-shadow:0 4px 12px rgba(0,0,0,.25);
 }
 
 /* ====== Barre top ====== */
@@ -38,72 +59,27 @@ body.bg{
   border:1px solid transparent; border-radius:8px;
 }
 .topbar a:hover{color:#fff;border-color:var(--bord);background:#0f0f13}
-.topbar a.active{color:#fff;background:#0f0f13;border-color:#2a2a33}
+.topbar a.active{ color:#f0e2c0; background:#16161b; border-color:#2a2a33; }
 
-/* ====== Layout ====== */
-.columns{
-  max-width:1100px; margin:18px auto; padding:0 12px;
-  display:grid; grid-template-columns:1fr 1fr; gap:12px;
-}
-.panel{
-  background:var(--panel);
-  border:1px solid var(--bord);
-  border-radius:12px; padding:12px;
-  box-shadow: 0 0 0 1px rgba(255,255,255,0.02) inset, 0 12px 30px rgba(0,0,0,0.35);
-}
-h2,h3{margin:0 0 10px}
-label{display:block;margin:6px 0;color:#d1d5db}
-input,select{
-  width:100%; padding:10px; border-radius:8px;
-  border:1px solid var(--bord); background:#0e0e12; color:var(--text);
-}
-
-/* ====== Boutons ====== */
-.btn{
-  display:inline-block; border:1px solid var(--bord); border-radius:10px;
-  padding:10px 12px; background:#0f0f13; color:#e5e7eb; cursor:pointer;
-}
-.btn:hover{filter:brightness(1.1)}
-.btn.primary{background:linear-gradient(180deg,#2a2012,#16110a); border-color:#3c2d17; color:#e9d8a6}
-.btn.danger{background:#2a1010;border-color:#4c1d1d}
-.btn:disabled{opacity:.5;cursor:not-allowed}
-
-/* ====== Grilles ====== */
-.grid{display:grid; gap:8px}
-.small{font-size:12px}
-.muted{color:var(--muted)}
-
-/* ====== Barres HP / Mana / XP ====== */
-.bars{display:grid; gap:6px}
-.bar{
-  position:relative; height:20px; border-radius:10px; overflow:hidden;
-  border:1px solid #2a2a33; background:#0c0c10;
-}
-.bar .bar-fill{height:100%; width:0%;}
+/* ====== Fiche barres ====== */
+.bar{ position:relative; height:22px; border:1px solid #2a2a33; border-radius:10px; overflow:hidden; background:#0d0d12; }
+.bar + .bar{ margin-top:6px; }
+.bar .bar-fill{ height:100%; width:0; background:linear-gradient(180deg,#35353d,#2a2a31); }
+.bar.hp .bar-fill{ background:linear-gradient(180deg,#7f1d1d,#b91c1c) }
+.bar.mana .bar-fill{ background:linear-gradient(180deg,#1e3a8a,#2563eb) }
+.bar.xp .bar-fill{ background:linear-gradient(180deg,#7c3e06,#f59e0b) }
 .bar .bar-text{
   position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
-  font-size:12px; color:#fff; text-shadow:0 1px 2px #000;
-}
-.bar.hp .bar-fill{background:linear-gradient(180deg,#7f1d1d,#b91c1c)}
-.bar.mana .bar-fill{background:linear-gradient(180deg,#1e3a8a,#2563eb)}
-.bar.xp .bar-fill{background:linear-gradient(180deg,#92400e,#f59e0b)}
-
-/* ====== Debug banner ====== */
-.dbg-banner{
-  position:sticky; top:0; z-index:25; padding:6px 10px;
-  display:flex; flex-wrap:wrap; gap:10px; align-items:center;
-  background:rgba(10,10,12,.85); border-bottom:1px solid var(--bord);
-  font-size:12px;
+  font-size:12px; color:#eaeaea; text-shadow:0 1px 0 #000;
 }
 
-/* ====== Carte / Rencontres ====== */
+/* ====== Carte ennemi ====== */
 .enemyCard{
-  min-height:150px; border:1px dashed #2a2a33; border-radius:12px; padding:10px;
-  display:flex; flex-direction:column; gap:8px; justify-content:center;
+  border:1px solid #2a2a33; border-radius:12px; padding:10px; background:#0f0f13;
 }
-.enemyCard .name{font-weight:700}
+.enemyCard .name{ font-weight:bold; margin-bottom:6px; }
 .enemyCard .hpbar{height:12px;border:1px solid #2a2a33;border-radius:8px;overflow:hidden;background:#0c0c10}
-.enemyCard .hpfill{height:100%;background:linear-gradient(180deg,#7f1d1d,#b91c1c);width:100%}
+.enemyCard .hpbar .hpfill{height:100%;background:linear-gradient(180deg,#7f1d1d,#b91c1c);width:100%}
 
 /* ====== Journal ====== */
 .logBox{
@@ -120,12 +96,9 @@ input,select{
 .item{
   border:1px solid #2a2a33; border-radius:10px; padding:8px; background:#0f0f13;
 }
-.item .nm{display:flex;justify-content:space-between;align-items:center;font-weight:700}
-.badge{font-size:11px;padding:2px 6px;border-radius:8px;background:#1f2937;color:#e5e7eb}
-
-/* Rareté (couleur nom) */
+.item .name{font-weight:bold}
 .r-normal{color:#e5e7eb}
-.r-magique{color:#60a5fa}
+.r-magic{color:#60a5fa}
 .r-rare{color:#fbbf24}
 .r-set{color:#22c55e}
 .r-unique{color:#f59e0b}
@@ -139,4 +112,24 @@ input,select{
 /* ====== Responsive ====== */
 @media (max-width:900px){
   .columns{grid-template-columns:1fr}
+}
+
+/* === Added: Flash effects and XP pulse === */
+.hpbar.hit   { animation: hpHurt 0.18s; }
+.hpbar.crit  { animation: hpCrit 0.22s; }
+.bar.xp.levelup { animation: xpPulse 0.5s; }
+
+@keyframes hpHurt { from { filter: brightness(1.8) } to { filter: brightness(1) } }
+@keyframes hpCrit { 0%{transform:translateX(0)} 20%{transform:translateX(-2px)} 40%{transform:translateX(2px)} 60%{transform:translateX(-1px)} 80%{transform:translateX(1px)} 100%{transform:translateX(0)} }
+@keyframes xpPulse { 0%{box-shadow:0 0 0 0 rgba(197,157,95,.6)} 100%{box-shadow:0 0 0 12px rgba(197,157,95,0)} }
+
+/* === Added: Item icon helper === */
+.item-icon { width: 16px; height: 16px; display: inline-block; vertical-align: text-bottom; background-size: cover; margin-right: 6px; }
+
+/* === Added: Hide ladder link while not implemented === */
+.topbar nav a[href="ladder.html"] { display: none; }
+
+/* === Added: ensure mobile tap targets === */
+@media (max-width: 600px) {
+  button, .btn { min-height: 44px; font-size: 1rem; }
 }

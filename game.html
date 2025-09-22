@@ -16,20 +16,21 @@
   <span>• Or ×<b id="dbgGold">1.00</b></span>
   <span>• Drop ×<b id="dbgDrop">1.00</b></span>
   <span>• MF +<b id="dbgMF">0</b>%</span>
-  <span>• Ennemi HP ×<b id="dbgEhp">1.00</b></span>
-  <span>• DMG ×<b id="dbgEdmg">1.00</b></span>
+  <span>• Enn. PV ×<b id="dbgEhp">1.00</b></span>
+  <span>• Enn. DMG ×<b id="dbgEdmg">1.00</b></span>
 </div>
 
 <header class="topbar">
-  <h1>Combat</h1>
+  <h1>Idle Ladder Prototype</h1>
   <nav>
     <a href="index.html">Sélection</a>
     <a href="game.html" class="active">Combat</a>
     <a href="inventory.html">Inventaire</a>
     <a href="shop.html">Campement</a>
     <a href="journal.html">Journal</a>
-    <a href="ladder.html">Classement</a>
+    <!-- <a href="ladder.html">Classement</a> -->
     <a href="admin.html">Admin</a>
+    <button class="btn" onclick="GameCore.newGame()">Nouvelle partie</button>
   </nav>
 </header>
 
@@ -68,112 +69,73 @@
         </label>
       </div>
     </div>
-    <button class="btn" style="margin-top:8px" id="btnGo">Aller</button>
+    <div style="display:flex; gap:8px; margin-top:8px">
+      <button class="btn primary" id="btnGo">Aller</button>
+      <button class="btn" id="btnStop">Stop</button>
+    </div>
   </section>
 
   <section class="panel">
-    <h2>Rencontre</h2>
-    <div id="enemyCard" class="enemyCard"></div>
-    <div class="panel" style="margin-top:12px">
-      <h3>Journal</h3>
-      <div class="logBox" id="logBox"></div>
+    <h2>Combat</h2>
+    <div id="enemyCard" class="enemyCard">
+      <div class="muted">Aucun ennemi. Choisis une zone puis <b>Aller</b>.</div>
     </div>
+
+    <h3 style="margin-top:12px">Journal</h3>
+    <div id="log" class="logBox" aria-live="polite"></div>
   </section>
 </main>
 
 <script src="js/core.v3.js"></script>
 <script src="js/zones.js"></script>
-<script src="js/loot.js"></script>
 <script src="js/combat.js"></script>
-
 <script>
-GameCore.ensureGameOrRedirect("index.html");
-
-function refreshBasics(){
-  const s=GameCore.state;
-  const need = GameCore.xpTable[s.level]||1;
-  document.getElementById('barHpFill').style.width=(s.hp/s.hpMax*100)+'%';
-  document.getElementById('barHpText').textContent=`HP ${s.hp}/${s.hpMax}`;
-  document.getElementById('barManaFill').style.width=(s.mana/s.manaMax*100)+'%';
-  document.getElementById('barManaText').textContent=`Mana ${s.mana}/${s.manaMax}`;
-  document.getElementById('barXpFill').style.width=(s.xp/need*100)+'%';
-  document.getElementById('barXpText').textContent=`XP ${s.xp}/${need}`;
-  document.getElementById('cAtk').textContent = GameCore.atkTotal();
-  document.getElementById('cDef').textContent = GameCore.defTotal();
-  document.getElementById('cCrit').textContent = GameCore.critTotal();
-  document.getElementById('cMF').textContent = GameCore.mfTotal();
-  document.getElementById('logBox').innerHTML = GameCore.logsHTML();
-}
-
-function buildMapSelectors(){
-  const selA=document.getElementById('selAct');
-  const selZ=document.getElementById('selZone');
-  selA.innerHTML='';
-  Zones.listActs().forEach(a=>{
-    if(Zones.isActUnlocked(a.id)){
-      const opt=document.createElement('option'); opt.value=a.id; opt.textContent=a.nameFR; selA.appendChild(opt);
-    }
-  });
-  selA.value = GameCore.state.currentAct;
-  function fillZones(){
-    selZ.innerHTML='';
-    Zones.listZones(selA.value).forEach(z=>{
-      const opt=document.createElement('option'); opt.value=z.id; opt.textContent=z.nameFR; selZ.appendChild(opt);
-    });
-    selZ.value = GameCore.state.currentZone;
-  }
-  selA.onchange=()=>{ GameCore.state.currentAct=parseInt(selA.value); fillZones(); };
-  selZ.onchange=()=>{ GameCore.state.currentZone=selZ.value; GameCore.save(); };
-  fillZones();
-  document.getElementById('btnGo').onclick=()=>{ 
-    GameCore.save(); 
-    Combat.spawn(true); // force respawn à la demande
-    refreshBasics();
+(function(){
+  GameCore.ensureGameOrRedirect("index.html");
+  // Remplir actes/zones
+  const selAct  = document.getElementById("selAct");
+  const selZone = document.getElementById("selZone");
+  Zones.fillActs(selAct);
+  selAct.onchange = ()=>Zones.fillZonesForAct(selAct, selZone);
+  Zones.fillZonesForAct(selAct, selZone);
+  document.getElementById("btnGo").onclick = ()=>{
+    const z = selZone.value;
+    GameCore.state.currentZone = z;
+    GameCore.save();
+    Combat.spawn();
   };
-}
+  document.getElementById("btnStop").onclick = ()=>{
+    if(window.Combat && Combat.toggleAuto) Combat.toggleAuto();
+  };
 
-function hookEnemyCardActions(){
-  // Délégation (marche même après re-render)
-  const card = document.getElementById('enemyCard');
-  card.addEventListener('click',(e)=>{
-    const id = e.target?.id;
-    if(id==='btnAttack'){ Combat.attackOnce(); }
-    if(id==='btnAuto'){ Combat.toggleAuto(); }
-  });
-}
+  // Debug banner live
+  (function(){
+    function fmt(n){ return Number(n||1).toFixed(2); }
+    function refresh(){
+      const diff = GameCore.getDifficulty();
+      const zoneId = GameCore.state?.currentZone || "—";
+      const z = Zones.getZone(zoneId);
+      const scal = Zones.getDifficultyScalars(diff);
+      const cfg = GameCore.getConfig?.() || {};
+      const xpF   = (scal.reward?.xp   ?? 1) * ((cfg.xpRate   ?? 100)/100);
+      const goldF = (scal.reward?.gold ?? 1) * ((cfg.goldRate ?? 100)/100);
+      const dropF = (scal.reward?.drop ?? 1) * ((cfg.dropRate ?? 100)/100);
+      const mfAdd = (scal.reward?.mfBonus ?? 0) + (cfg.mfRate ?? 0);
+      document.getElementById('dbgDiff').textContent = 'Diff: '+diff;
+      document.getElementById('dbgZone').textContent = z ? z.nameFR : zoneId;
+      document.getElementById('dbgXP').textContent   = fmt(xpF);
+      document.getElementById('dbgGold').textContent = fmt(goldF);
+      document.getElementById('dbgDrop').textContent = fmt(dropF);
+      document.getElementById('dbgMF').textContent   = String(mfAdd);
+      document.getElementById('dbgEhp').textContent  = fmt(scal.enemy?.hp ?? 1);
+      document.getElementById('dbgEdmg').textContent = fmt(scal.enemy?.dmg ?? 1);
+    }
+    refresh(); setInterval(refresh,1000);
+  })();
 
-refreshBasics();
-buildMapSelectors();
-hookEnemyCardActions();
-setInterval(refreshBasics,1000);
-
-// Bandeau debug live
-(function DebugBanner(){
-  function fmt(n){ return (Math.round(n*100)/100).toFixed(2); }
-  function refresh(){
-    const diff = GameCore.getDifficulty?.() || "Normal";
-    const zoneId = GameCore.state?.currentZone || "—";
-    const z = Zones.getZone(zoneId);
-    const scal = Zones.getDifficultyScalars(diff);
-    const cfg = GameCore.getConfig?.() || {};
-    const xpF   = (scal.reward?.xp   ?? 1) * ((cfg.xpRate   ?? 100)/100);
-    const goldF = (scal.reward?.gold ?? 1) * ((cfg.goldRate ?? 100)/100);
-    const dropF = (scal.reward?.drop ?? 1) * ((cfg.dropRate ?? 100)/100);
-    const mfAdd = (scal.reward?.mfBonus ?? 0) + (cfg.mfRate ?? 0);
-    document.getElementById('dbgDiff').textContent = 'Diff: '+diff;
-    document.getElementById('dbgZone').textContent = z ? z.nameFR : zoneId;
-    document.getElementById('dbgXP').textContent   = fmt(xpF);
-    document.getElementById('dbgGold').textContent = fmt(goldF);
-    document.getElementById('dbgDrop').textContent = fmt(dropF);
-    document.getElementById('dbgMF').textContent   = String(mfAdd);
-    document.getElementById('dbgEhp').textContent  = fmt(scal.enemy?.hp ?? 1);
-    document.getElementById('dbgEdmg').textContent = fmt(scal.enemy?.dmg ?? 1);
-  }
-  refresh(); setInterval(refresh,1000);
+  // Premier spawn sûr après init UI
+  setTimeout(()=>{ Combat.spawn(false); }, 50);
 })();
-
-// Premier spawn sûr après init UI
-setTimeout(()=>{ Combat.spawn(false); }, 50);
 </script>
 </body>
 </html>
