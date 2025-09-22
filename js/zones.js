@@ -1,16 +1,15 @@
-/* zones.js — Waypoints style Diablo II + boss gate (GLOBAL) */
+/* zones.js — Waypoints style Diablo II + boss gate + taux d'apparition */
 var Zones = (function () {
-  // Helper: fabrique un waypoint
   function wp(id, zl, nameFR, baseXP, baseGold, bossId, bossName, actBoss) {
     return {
       id, zl, nameFR, baseXP, baseGold,
-      bossId,            // id du boss à vaincre pour débloquer le suivant
-      bossName,          // nom d'affichage
-      actBoss: !!actBoss // true si boss de fin d'acte (condition pour passer à l'acte suivant)
+      bossId, bossName,
+      actBoss: !!actBoss,
+      bossChance: actBoss ? 0.03 : (bossId ? 0.05 : 0) // 3% si boss d'acte, 5% sinon
     };
   }
 
-  // ===== Acte I (9 waypoints) =====
+  // Acte I
   const A1 = {
     id: "A1",
     name: "Acte I — Camp des Rogues",
@@ -27,7 +26,7 @@ var Zones = (function () {
     ]
   };
 
-  // ===== Acte II (9 waypoints) =====
+  // Acte II
   const A2 = {
     id: "A2",
     name: "Acte II — Lut Gholein",
@@ -44,7 +43,7 @@ var Zones = (function () {
     ]
   };
 
-  // ===== Acte III (9 waypoints) =====
+  // Acte III
   const A3 = {
     id: "A3",
     name: "Acte III — Kurast",
@@ -61,7 +60,7 @@ var Zones = (function () {
     ]
   };
 
-  // ===== Acte IV (3 waypoints) =====
+  // Acte IV
   const A4 = {
     id: "A4",
     name: "Acte IV — Pandémonium",
@@ -72,7 +71,7 @@ var Zones = (function () {
     ]
   };
 
-  // ===== Acte V (10 waypoints) =====
+  // Acte V
   const A5 = {
     id: "A5",
     name: "Acte V — Arreat",
@@ -92,20 +91,12 @@ var Zones = (function () {
 
   const ACTS = [A1, A2, A3, A4, A5];
 
-  // ===== API =====
-  function allWaypoints() {
-    return ACTS.flatMap(a => a.waypoints);
-  }
-  function getActById(actId) {
-    return ACTS.find(a => a.id === actId) || null;
-  }
-  function getActByZoneId(zoneId) {
-    return ACTS.find(a => a.waypoints.some(z => z.id === zoneId)) || null;
-  }
-  function getZone(zoneId) {
-    return allWaypoints().find(z => z.id === zoneId) || null;
-  }
-  function getDifficultyScalars(diffName) {
+  function allWaypoints(){ return ACTS.flatMap(a => a.waypoints); }
+  function getActById(actId){ return ACTS.find(a => a.id === actId) || null; }
+  function getActByZoneId(zoneId){ return ACTS.find(a => a.waypoints.some(z => z.id === zoneId)) || null; }
+  function getZone(zoneId){ return allWaypoints().find(z => z.id === zoneId) || null; }
+
+  function getDifficultyScalars(diffName){
     const DIFF = {
       "Normal":    { enemy:{hp:1.0, dmg:1.0}, reward:{xp:1.0, gold:1.0, drop:1.0}, mfBonus:0 },
       "Cauchemar": { enemy:{hp:1.7, dmg:1.3}, reward:{xp:1.5, gold:1.4, drop:1.35}, mfBonus:10 },
