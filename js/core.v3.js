@@ -1,5 +1,5 @@
 /* core.v3.js (avec migration & debug léger) */
-const GameCore = {
+var GameCore = {
   __version: "v3",
   state: null,
 
