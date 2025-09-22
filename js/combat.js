@@ -1,4 +1,4 @@
-/* combat.js — boss gating avec taux d'apparition + auto stop */
+/* combat.js — boss gating + auto stop + fiche perso */
 (function(){
   var Combat = {};
   var current = null;
@@ -18,8 +18,8 @@
   }
 
   function ensureReady(){
-    if(!window.GameCore||!GameCore.state){ console.warn("[Combat] GameCore/state manquant"); return false; }
-    if(!window.Zones){ console.warn("[Combat] Zones manquant"); return false; }
+    if(!window.GameCore||!GameCore.state){ return false; }
+    if(!window.Zones){ return false; }
     return true;
   }
 
@@ -48,6 +48,21 @@
     el=document.getElementById('cMF');   if(el) el.textContent=GameCore.mfTotal();
   }
 
+  function renderCharSheet(){
+    if(!ensureReady()) return;
+    var s=GameCore.state;
+    var el;
+    el=document.getElementById("charName");  if(el) el.textContent=s.name;
+    el=document.getElementById("charClass"); if(el) el.textContent=s.klass;
+    el=document.getElementById("charLevel"); if(el) el.textContent=s.level;
+    el=document.getElementById("charGold");  if(el) el.textContent=s.gold;
+    el=document.getElementById("charStr");   if(el) el.textContent=s.str;
+    el=document.getElementById("charDex");   if(el) el.textContent=s.dex;
+    el=document.getElementById("charVit");   if(el) el.textContent=s.vit;
+    el=document.getElementById("charEne");   if(el) el.textContent=s.ene;
+    el=document.getElementById("charPts");   if(el) el.textContent=s.statPts;
+  }
+
   function spawn(forceLog){
     if(!ensureReady()) return;
     var s=GameCore.state;
@@ -69,10 +84,7 @@
       name=(z.bossName||"Boss")+" [BOSS]";
       baseHP=Math.max(40,Math.floor(z.zl*10));
       baseDMG=Math.max(6,Math.floor(z.zl*1.6));
-      if(interval){ // couper auto si actif
-        clearInterval(interval); interval=null;
-        GameCore.log("⏹️ Auto OFF (boss détecté)");
-      }
+      if(interval){ clearInterval(interval); interval=null; GameCore.log("⏹️ Auto OFF (boss détecté)"); }
     } else {
       var names=["Décharné","Rôdeur","Corrompu","Démon","Chauve-souris","Goule","Spectre","Fétiche","Déchu"];
       name=names[Math.floor(Math.random()*names.length)]+" (Z"+z.zl+")";
@@ -80,13 +92,11 @@
       baseDMG=Math.max(3,Math.floor(z.zl*0.8));
     }
 
-    current={
-      name,isBoss,
+    current={ name,isBoss,
       hpMax:Math.floor(baseHP*(diff.enemy.hp||1)),
       hp:   Math.floor(baseHP*(diff.enemy.hp||1)),
       dmg:  Math.floor(baseDMG*(diff.enemy.dmg||1)),
-      zone:z
-    };
+      zone:z };
     renderEnemy();
     if(forceLog!==false) GameCore.log((isBoss?"⚠️ ":"")+"Un "+current.name+" apparaît.");
   }
@@ -145,7 +155,7 @@
       var goldGain=Math.floor(z.baseGold*(diff.reward.gold||1));
       GameCore.addXP(xpGain);
       GameCore.addGold(goldGain);
-      renderPlayer(); renderStats();
+      renderPlayer(); renderStats(); renderCharSheet();
       current=null; renderEnemy();
       return;
     }
@@ -193,7 +203,7 @@
   document.addEventListener("DOMContentLoaded",function(){
     GameCore.ensureGameOrRedirect("index.html");
     if(!ensureReady()) return;
-    renderStats(); renderPlayer();
+    renderStats(); renderPlayer(); renderCharSheet();
     if(document.getElementById("enemyCard")) spawn(false);
     var wasAuto=localStorage.getItem("idleARPG_auto")==="1";
     var last=Number(localStorage.getItem("idleARPG_lastTick")||"0");

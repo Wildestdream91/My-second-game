@@ -1,50 +1,55 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-  <title>Idle ARPG — Combat</title>
-  <link rel="stylesheet" href="css/style.css" />
+  <meta charset="UTF-8">
+  <title>IdleARPG - Combat</title>
+  <link rel="stylesheet" href="css/style.css">
 </head>
-<body class="bg">
-
-  <header class="topbar">
-    <h1>Idle Ladder Prototype</h1>
-    <nav>
-      <a href="index.html">Sélection</a>
-      <a href="game.html" class="active">Combat</a>
-      <a href="inventory.html">Inventaire</a>
-      <a href="shop.html">Campement</a>
-      <a href="journal.html">Journal</a>
-      <a href="ladder.html">Classement</a>
-      <a href="admin.html">Admin</a>
-      <button class="btn" onclick="GameCore.newGame()">Nouvelle partie</button>
-    </nav>
-  </header>
-
-  <main class="columns" style="grid-template-columns:0.9fr 1.1fr;">
+<body>
+  <main class="layout">
+    
+    <!-- Colonne gauche : joueur -->
     <section class="panel">
       <h2>Personnage</h2>
 
+      <!-- Barres -->
       <div class="bars">
         <div class="bar hp">
-          <div class="bar-fill" id="barHpFill" style="width:0%"></div>
+          <div class="bar-fill" id="barHpFill"></div>
           <div class="bar-text" id="barHpText">HP 0/0</div>
         </div>
         <div class="bar mana">
-          <div class="bar-fill" id="barManaFill" style="width:0%"></div>
+          <div class="bar-fill" id="barManaFill"></div>
           <div class="bar-text" id="barManaText">Mana 0/0</div>
         </div>
         <div class="bar xp">
-          <div class="bar-fill" id="barXpFill" style="width:0%"></div>
+          <div class="bar-fill" id="barXpFill"></div>
           <div class="bar-text" id="barXpText">XP 0/0</div>
         </div>
       </div>
 
+      <!-- Stats rapides -->
       <div class="statsBox" style="margin-top:10px">
-        <div>ATQ <b id="cAtk">0</b> • DEF <b id="cDef">0</b> • Crit <b id="cCrit">0</b>% • MF <b id="cMF">0</b>%</div>
+        <div>
+          ATQ <b id="cAtk">0</b> • DEF <b id="cDef">0</b> • Crit <b id="cCrit">0</b>% • MF <b id="cMF">0</b>%
+        </div>
       </div>
 
+      <!-- Fiche perso détaillée -->
+      <h3 style="margin-top:12px">Fiche personnage</h3>
+      <div class="charSheet">
+        <div><b id="charName">—</b> (<span id="charClass">—</span>)</div>
+        <div>Niveau <b id="charLevel">1</b></div>
+        <div>Or : <b id="charGold">0</b></div>
+        <hr/>
+        <div>FOR : <b id="charStr">0</b> <button onclick="GameCore.spendStatPoint('str')">+</button></div>
+        <div>DEX : <b id="charDex">0</b> <button onclick="GameCore.spendStatPoint('dex')">+</button></div>
+        <div>VIT : <b id="charVit">0</b> <button onclick="GameCore.spendStatPoint('vit')">+</button></div>
+        <div>ENE : <b id="charEne">0</b> <button onclick="GameCore.spendStatPoint('ene')">+</button></div>
+        <div>Pts dispo : <b id="charPts">0</b></div>
+      </div>
+
+      <!-- Carte -->
       <h3 style="margin-top:12px">Carte</h3>
       <div class="grid" style="grid-template-columns:1fr 1fr;gap:8px">
         <div>
@@ -64,51 +69,48 @@
       </div>
     </section>
 
+    <!-- Colonne droite : combat -->
     <section class="panel">
       <h2>Combat</h2>
-      <div id="enemyCard" class="enemyCard">
-        <div class="muted">Aucun ennemi. Choisis une zone puis <b>Aller</b>.</div>
-      </div>
-
-      <h3 style="margin-top:12px">Journal</h3>
-      <div id="log" class="logBox" aria-live="polite"></div>
+      <div id="enemyCard" class="enemyCard"></div>
+      <div id="logBox" class="logBox"></div>
     </section>
+
   </main>
 
   <script src="js/core.v3.js"></script>
   <script src="js/zones.js"></script>
   <script src="js/combat.js"></script>
   <script>
-    (function () {
-      GameCore.ensureGameOrRedirect("index.html");
-
-      const selAct  = document.getElementById("selAct");
-      const selZone = document.getElementById("selZone");
-
-      // Remplir actes/zones avec cadenas (🔒) si verrouillés
-      Zones.fillActs(selAct);
-      function refreshZones(){
-        Zones.fillZonesForAct(selAct, selZone, (zoneId)=>GameCore.canTravelTo(zoneId));
-      }
-      selAct.onchange = refreshZones;
-      refreshZones();
-
-      // Bouton Aller avec vérification de verrou
-      document.getElementById("btnGo").onclick = () => {
-        const z = selZone.value;
-        if(!GameCore.canTravelTo(z)){
-          alert("🚫 Waypoint verrouillé : vaincs d'abord le boss de la zone précédente (ou le boss d'acte).");
+    document.addEventListener("DOMContentLoaded",function(){
+      Zones.fillActs(document.getElementById("selAct"));
+      Zones.fillZonesForAct(
+        document.getElementById("selAct"),
+        document.getElementById("selZone"),
+        GameCore.canTravelTo
+      );
+      document.getElementById("selAct").onchange=function(){
+        Zones.fillZonesForAct(
+          document.getElementById("selAct"),
+          document.getElementById("selZone"),
+          GameCore.canTravelTo
+        );
+      };
+      document.getElementById("btnGo").onclick=function(){
+        var act=document.getElementById("selAct").value;
+        var zone=document.getElementById("selZone").value;
+        if(!GameCore.canTravelTo(zone)){
+          alert("Zone verrouillée ! Boss non vaincu.");
           return;
         }
-        GameCore.state.currentZone = z;
-        GameCore.save();
-        if (window.Combat && Combat.spawn) Combat.spawn();
+        GameCore.travelTo(zone);
+        Combat.spawn();
       };
-
-      document.getElementById("btnStop").onclick = () => {
-        if (window.Combat && Combat.toggleAuto) Combat.toggleAuto();
+      document.getElementById("btnStop").onclick=function(){
+        localStorage.setItem("idleARPG_auto","0");
+        GameCore.log("⏹️ Combat arrêté");
       };
-    })();
+    });
   </script>
 </body>
 </html>
