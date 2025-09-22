@@ -1,99 +1,89 @@
-/* combat.js — boucle combat + rendu joueur (HP/Mana/XP/Stats) */
+/* combat.js — boss gating: le boss de la zone apparaît tant qu'il n'est pas vaincu */
 (function(){
   var Combat = {};
-  var current = null;   // ennemi courant
-  var interval = null;  // auto-attack timer
+  var current = null;
+  var interval = null;
 
-  /* ---------- Helpers UI ---------- */
   function flash(selector, cls){
     var el = document.querySelector(selector);
     if(!el) return;
     el.classList.add(cls);
     setTimeout(function(){ el.classList.remove(cls); }, 220);
   }
-
   function clampPct(n){
     n = Math.max(0, Math.min(100, Math.round(n)));
     if (!isFinite(n)) return 0;
     return n;
   }
-
   function ensureReady(){
-    if (!window.GameCore || !GameCore.state) {
-      console.warn("[Combat] GameCore/state manquant");
-      return false;
-    }
-    if (!window.Zones) {
-      console.warn("[Combat] Zones manquant");
-      return false;
-    }
+    if (!window.GameCore || !GameCore.state) { console.warn("[Combat] GameCore/state manquant"); return false; }
+    if (!window.Zones) { console.warn("[Combat] Zones manquant"); return false; }
     return true;
   }
 
-  /* ---------- Rendu joueur (Combat page) ---------- */
+  // ---- Rendu joueur
   function renderPlayer(){
     if(!ensureReady()) return;
     var s = GameCore.state;
-
-    // HP
     var hpPct = clampPct((s.hp / (s.hpMax||1)) * 100);
-    var hpFill = document.getElementById('barHpFill');
-    var hpTxt  = document.getElementById('barHpText');
-    if (hpFill) hpFill.style.width = hpPct + '%';
-    if (hpTxt)  hpTxt.textContent  = "HP " + s.hp + "/" + s.hpMax;
-
-    // Mana
     var mpPct = clampPct((s.mana / (s.manaMax||1)) * 100);
-    var mpFill = document.getElementById('barManaFill');
-    var mpTxt  = document.getElementById('barManaText');
-    if (mpFill) mpFill.style.width = mpPct + '%';
-    if (mpTxt)  mpTxt.textContent  = "Mana " + s.mana + "/" + s.manaMax;
-
-    // XP
     var xpMax = (GameCore.xpTable && GameCore.xpTable[s.level]) || 1;
     var xpPct = clampPct((s.xp / xpMax) * 100);
-    var xpFill = document.getElementById('barXpFill');
-    var xpTxt  = document.getElementById('barXpText');
-    if (xpFill) xpFill.style.width = xpPct + '%';
-    if (xpTxt)  xpTxt.textContent  = "XP " + s.xp + "/" + xpMax;
-  }
+    var el;
 
+    el = document.getElementById('barHpFill'); if(el) el.style.width = hpPct + '%';
+    el = document.getElementById('barHpText'); if(el) el.textContent = "HP " + s.hp + "/" + s.hpMax;
+    el = document.getElementById('barManaFill'); if(el) el.style.width = mpPct + '%';
+    el = document.getElementById('barManaText'); if(el) el.textContent = "Mana " + s.mana + "/" + s.manaMax;
+    el = document.getElementById('barXpFill'); if(el) el.style.width = xpPct + '%';
+    el = document.getElementById('barXpText'); if(el) el.textContent = "XP " + s.xp + "/" + xpMax;
+  }
   function renderStats(){
     if(!ensureReady()) return;
-    var atk = (GameCore.atkTotal && GameCore.atkTotal()) || 0;
-    var def = (GameCore.defTotal && GameCore.defTotal()) || 0;
-    var crt = (GameCore.critTotal && GameCore.critTotal()) || 0;
-    var mf  = (GameCore.mfTotal && GameCore.mfTotal()) || 0;
-
-    var elA = document.getElementById('cAtk');
-    var elD = document.getElementById('cDef');
-    var elC = document.getElementById('cCrit');
-    var elM = document.getElementById('cMF');
-    if(elA) elA.textContent = atk;
-    if(elD) elD.textContent = def;
-    if(elC) elC.textContent = crt;
-    if(elM) elM.textContent = mf;
+    var el;
+    el = document.getElementById('cAtk');  if(el) el.textContent = (GameCore.atkTotal && GameCore.atkTotal()) || 0;
+    el = document.getElementById('cDef');  if(el) el.textContent = (GameCore.defTotal && GameCore.defTotal()) || 0;
+    el = document.getElementById('cCrit'); if(el) el.textContent = (GameCore.critTotal && GameCore.critTotal()) || 0;
+    el = document.getElementById('cMF');   if(el) el.textContent = (GameCore.mfTotal && GameCore.mfTotal()) || 0;
   }
 
-  /* ---------- Ennemi ---------- */
+  // ---- Spawn (boss si non vaincu)
   function spawn(forceLog){
     if(!ensureReady()) return;
     var s = GameCore.state;
-    var z = Zones.getZone(s.currentZone) || { zl:1, baseXP:10, baseGold:5, nameFR:"Zone inconnue" };
+    var z = Zones.getZone(s.currentZone);
+    if(!z){ z = { zl:1, baseXP:10, baseGold:5, nameFR:"Zone inconnue" }; }
     var diff = Zones.getDifficultyScalars(GameCore.getDifficulty());
-    var names = ["Décharné","Sombre rôdeur","Corrompu","Démon mineur","Chauve-souris","Goule","Spectre","Fétiche","Guerrier déchu"];
-    var n = names[Math.floor(Math.random()*names.length)];
-    var baseHP  = Math.max(12, z.zl*6);
-    var baseDMG = Math.max(3, Math.floor(z.zl*0.8));
+
+    var isBoss = false;
+    var name;
+    var baseHP, baseDMG;
+
+    var bossAlreadyDead = z.bossId && !!(s.progress && s.progress.bosses && s.progress.bosses[z.bossId]);
+
+    if(z.bossId && !bossAlreadyDead){
+      isBoss = true;
+      name = (z.bossName || "Boss de la zone") + " [BOSS]";
+      baseHP  = Math.max(40, Math.floor(z.zl*10));
+      baseDMG = Math.max(6,  Math.floor(z.zl*1.6));
+    }else{
+      var names = ["Décharné","Sombre rôdeur","Corrompu","Démon mineur","Chauve-souris","Goule","Spectre","Fétiche","Guerrier déchu"];
+      name = names[Math.floor(Math.random()*names.length)] + " (Z" + z.zl + ")";
+      baseHP  = Math.max(12, z.zl*6);
+      baseDMG = Math.max(3, Math.floor(z.zl*0.8));
+    }
+
     current = {
-      name: n + " (Z" + z.zl + ")",
+      name: name,
+      isBoss: isBoss,
       hpMax: Math.floor(baseHP * (diff.enemy.hp||1)),
       hp:    Math.floor(baseHP * (diff.enemy.hp||1)),
       dmg:   Math.floor(baseDMG * (diff.enemy.dmg||1)),
-      zone: z
+      zone:  z
     };
+
     renderEnemy();
-    if (forceLog !== false) GameCore.log("Un " + current.name + " apparaît.");
+    if (forceLog !== false) GameCore.log((isBoss?"⚠️ ":"") + "Un " + current.name + " apparaît.");
   }
 
   function renderEnemy(){
@@ -118,7 +108,7 @@
     if(au) au.onclick = toggleAuto;
   }
 
-  /* ---------- Calculs dégâts ---------- */
+  // ---- Dégâts
   function playerAttackDamage(){
     var base = (GameCore.atkTotal && GameCore.atkTotal()) || 1;
     var dmg = Math.max(1, Math.floor(base * (0.7 + Math.random()*0.6)));
@@ -126,7 +116,6 @@
     if(crit) dmg = Math.floor(dmg*1.5);
     return dmg;
   }
-
   function enemyAttackDamage(){
     var def = (GameCore.defTotal && GameCore.defTotal()) || 0;
     var dmg = Math.max(1, current.dmg - Math.floor(def*0.25));
@@ -134,7 +123,7 @@
     return dmg;
   }
 
-  /* ---------- Récompenses & mort ennemi ---------- */
+  // ---- Récompenses & mort
   function giveRewards(z){
     var diff = Zones.getDifficultyScalars(GameCore.getDifficulty());
     var cfg  = (GameCore.getConfig && GameCore.getConfig()) || {};
@@ -144,16 +133,15 @@
     GameCore.addGold(goldGain);
     GameCore.log("+"+xpGain+" XP, +"+goldGain+" or");
     if (window.Loot && Loot.rollDrop) Loot.rollDrop(z);
-
-    renderPlayer(); // mise à jour barres
+    renderPlayer();
   }
 
   function checkDeath(){
     if(current && current.hp<=0){
       GameCore.log(current.name + " est vaincu !");
       giveRewards(current.zone);
-      if(current.zone.boss && current.zone.bossId){
-        GameCore.onBossDefeated(current.zone.bossId);
+      if(current.isBoss){
+        GameCore.markZoneBossDefeated(current.zone);
       }
       current=null; renderEnemy();
       if(interval){ setTimeout(spawn, 450); }
@@ -162,12 +150,11 @@
     return false;
   }
 
-  /* ---------- Tour d’attaque ---------- */
+  // ---- Tour
   function attackOnce(){
     if(!current) return;
     GameCore.initSFX && GameCore.initSFX();
 
-    // joueur tape
     var dmgP = playerAttackDamage();
     current.hp = Math.max(0, current.hp - dmgP);
     GameCore.playSFX && GameCore.playSFX('hit');
@@ -176,7 +163,6 @@
     renderEnemy();
     if(checkDeath()) return;
 
-    // ennemi tape
     var dmgE = enemyAttackDamage();
     var s = GameCore.state;
     s.hp = Math.max(0, s.hp - dmgE);
@@ -198,7 +184,7 @@
     renderPlayer();
   }
 
-  /* ---------- Auto-fight + reprise ---------- */
+  // ---- Auto
   function toggleAuto(){
     if(interval){
       clearInterval(interval); interval=null;
@@ -216,7 +202,7 @@
   }
 
   function fastForward(ms){
-    var cap = Math.min(ms||0, 120000); // 2 min max
+    var cap = Math.min(ms||0, 120000);
     var steps = Math.floor(cap / 900);
     if(steps <= 0) return;
     if(!current) spawn();
@@ -226,16 +212,14 @@
     }
   }
 
-  /* ---------- Expose & init ---------- */
+  // ---- Expose & init
   Combat.spawn = spawn;
   Combat.attackOnce = attackOnce;
   Combat.toggleAuto = toggleAuto;
   window.Combat = Combat;
 
   document.addEventListener("DOMContentLoaded", function(){
-    // Charge la sauvegarde sinon redirige vers index
     GameCore.ensureGameOrRedirect("index.html");
-
     if(!ensureReady()) return;
 
     renderStats();
@@ -253,7 +237,6 @@
         GameCore.log("Auto ON (repris)");
       }
     }
-
     setInterval(function(){
       if(interval) localStorage.setItem("idleARPG_lastTick", String(Date.now()));
     }, 3000);

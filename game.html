@@ -8,19 +8,6 @@
 </head>
 <body class="bg">
 
-  <!-- Bandeau debug live -->
-  <div id="debugBanner" class="dbg-banner" aria-live="polite" style="font-size:12px;padding:6px 10px;border-bottom:1px solid #24242a;background:#0e0e12;position:sticky;top:0;z-index:5">
-    <span id="dbgDiff">Diff: —</span>
-    <span>• Zone: <b id="dbgZone">—</b></span>
-    <span>• XP ×<b id="dbgXP">1.00</b></span>
-    <span>• Or ×<b id="dbgGold">1.00</b></span>
-    <span>• Drop ×<b id="dbgDrop">1.00</b></span>
-    <span>• MF +<b id="dbgMF">0</b>%</span>
-    <span>• Enn. PV ×<b id="dbgEhp">1.00</b></span>
-    <span>• Enn. DMG ×<b id="dbgEdmg">1.00</b></span>
-  </div>
-
-  <!-- Topbar -->
   <header class="topbar">
     <h1>Idle Ladder Prototype</h1>
     <nav>
@@ -35,14 +22,10 @@
     </nav>
   </header>
 
-  <!-- Contenu -->
   <main class="columns" style="grid-template-columns:0.9fr 1.1fr;">
-
-    <!-- Colonne gauche : joueur -->
     <section class="panel">
       <h2>Personnage</h2>
 
-      <!-- Barres -->
       <div class="bars">
         <div class="bar hp">
           <div class="bar-fill" id="barHpFill" style="width:0%"></div>
@@ -58,12 +41,10 @@
         </div>
       </div>
 
-      <!-- Stats -->
       <div class="statsBox" style="margin-top:10px">
         <div>ATQ <b id="cAtk">0</b> • DEF <b id="cDef">0</b> • Crit <b id="cCrit">0</b>% • MF <b id="cMF">0</b>%</div>
       </div>
 
-      <!-- Carte -->
       <h3 style="margin-top:12px">Carte</h3>
       <div class="grid" style="grid-template-columns:1fr 1fr;gap:8px">
         <div>
@@ -83,7 +64,6 @@
       </div>
     </section>
 
-    <!-- Colonne droite : combat + journal -->
     <section class="panel">
       <h2>Combat</h2>
       <div id="enemyCard" class="enemyCard">
@@ -93,60 +73,41 @@
       <h3 style="margin-top:12px">Journal</h3>
       <div id="log" class="logBox" aria-live="polite"></div>
     </section>
-
   </main>
 
-  <!-- Scripts (ordre important) -->
   <script src="js/core.v3.js"></script>
   <script src="js/zones.js"></script>
   <script src="js/combat.js"></script>
   <script>
-    // Initialisation page (petit bandeau debug + hooks UI)
     (function () {
-      // sécurise la présence d’une partie
       GameCore.ensureGameOrRedirect("index.html");
 
-      // Remplir actes/zones
       const selAct  = document.getElementById("selAct");
       const selZone = document.getElementById("selZone");
-      Zones.fillActs(selAct);
-      selAct.onchange = () => Zones.fillZonesForAct(selAct, selZone);
-      Zones.fillZonesForAct(selAct, selZone);
 
-      // Boutons
+      // Remplir actes/zones avec cadenas (🔒) si verrouillés
+      Zones.fillActs(selAct);
+      function refreshZones(){
+        Zones.fillZonesForAct(selAct, selZone, (zoneId)=>GameCore.canTravelTo(zoneId));
+      }
+      selAct.onchange = refreshZones;
+      refreshZones();
+
+      // Bouton Aller avec vérification de verrou
       document.getElementById("btnGo").onclick = () => {
         const z = selZone.value;
+        if(!GameCore.canTravelTo(z)){
+          alert("🚫 Waypoint verrouillé : vaincs d'abord le boss de la zone précédente (ou le boss d'acte).");
+          return;
+        }
         GameCore.state.currentZone = z;
         GameCore.save();
         if (window.Combat && Combat.spawn) Combat.spawn();
       };
+
       document.getElementById("btnStop").onclick = () => {
         if (window.Combat && Combat.toggleAuto) Combat.toggleAuto();
       };
-
-      // Bandeau debug live (facultatif)
-      function fmt(n){ return Number(n||1).toFixed(2); }
-      function refreshDbg(){
-        const diff = GameCore.getDifficulty();
-        const zoneId = GameCore.state?.currentZone || "—";
-        const z = Zones.getZone(zoneId);
-        const scal = Zones.getDifficultyScalars(diff);
-        const cfg = GameCore.getConfig?.() || {};
-        const xpF   = (scal.reward?.xp   ?? 1) * ((cfg.xpRate   ?? 100)/100);
-        const goldF = (scal.reward?.gold ?? 1) * ((cfg.goldRate ?? 100)/100);
-        const dropF = (scal.reward?.drop ?? 1) * ((cfg.dropRate ?? 100)/100);
-        const mfAdd = (scal.mfBonus ?? 0) + (cfg.mfRate ?? 0);
-        document.getElementById('dbgDiff').textContent = 'Diff: ' + diff;
-        document.getElementById('dbgZone').textContent = z ? z.nameFR : zoneId;
-        document.getElementById('dbgXP').textContent   = fmt(xpF);
-        document.getElementById('dbgGold').textContent = fmt(goldF);
-        document.getElementById('dbgDrop').textContent = fmt(dropF);
-        document.getElementById('dbgMF').textContent   = String(mfAdd);
-        document.getElementById('dbgEhp').textContent  = fmt(scal.enemy?.hp ?? 1);
-        document.getElementById('dbgEdmg').textContent = fmt(scal.enemy?.dmg ?? 1);
-      }
-      refreshDbg();
-      setInterval(refreshDbg, 1000);
     })();
   </script>
 </body>
