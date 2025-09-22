@@ -1,6 +1,5 @@
 /* combat.js — boucle combat + rendu joueur (HP/Mana/XP/Stats) */
 (function(){
-  // Expose public API à la fin
   var Combat = {};
   var current = null;   // ennemi courant
   var interval = null;  // auto-attack timer
@@ -12,6 +11,7 @@
     el.classList.add(cls);
     setTimeout(function(){ el.classList.remove(cls); }, 220);
   }
+
   function clampPct(n){
     n = Math.max(0, Math.min(100, Math.round(n)));
     if (!isFinite(n)) return 0;
@@ -19,8 +19,14 @@
   }
 
   function ensureReady(){
-    if (!window.GameCore || !GameCore.state) { console.warn("[Combat] GameCore/state manquant"); return false; }
-    if (!window.Zones) { console.warn("[Combat] Zones manquant"); return false; }
+    if (!window.GameCore || !GameCore.state) {
+      console.warn("[Combat] GameCore/state manquant");
+      return false;
+    }
+    if (!window.Zones) {
+      console.warn("[Combat] Zones manquant");
+      return false;
+    }
     return true;
   }
 
@@ -120,6 +126,7 @@
     if(crit) dmg = Math.floor(dmg*1.5);
     return dmg;
   }
+
   function enemyAttackDamage(){
     var def = (GameCore.defTotal && GameCore.defTotal()) || 0;
     var dmg = Math.max(1, current.dmg - Math.floor(def*0.25));
@@ -138,8 +145,7 @@
     GameCore.log("+"+xpGain+" XP, +"+goldGain+" or");
     if (window.Loot && Loot.rollDrop) Loot.rollDrop(z);
 
-    // maj affichage XP/or côté combat
-    renderPlayer();
+    renderPlayer(); // mise à jour barres
   }
 
   function checkDeath(){
@@ -177,20 +183,19 @@
     flash('.bar.hp', 'hit');
     GameCore.log("Vous subissez " + dmgE + " dégâts.");
 
-    // si mort joueur
     if(s.hp<=0){
       GameCore.log("💀 Vous tombez au combat ! -10% or, retour au camp.");
       s.gold = Math.max(0, Math.floor(s.gold*0.9));
       s.hp = Math.max(1, Math.floor(s.hpMax*0.5));
       GameCore.save();
       current=null; renderEnemy();
-      renderPlayer(); // remettre les barres en cohérence
+      renderPlayer();
       if(interval) toggleAuto();
       return;
     }
 
     GameCore.save();
-    renderPlayer(); // maj barres HP/XP/Mana après échange de coups
+    renderPlayer();
   }
 
   /* ---------- Auto-fight + reprise ---------- */
@@ -211,7 +216,7 @@
   }
 
   function fastForward(ms){
-    var cap = Math.min(ms||0, 120000); // 2 minutes max
+    var cap = Math.min(ms||0, 120000); // 2 min max
     var steps = Math.floor(cap / 900);
     if(steps <= 0) return;
     if(!current) spawn();
@@ -228,13 +233,14 @@
   window.Combat = Combat;
 
   document.addEventListener("DOMContentLoaded", function(){
+    // Charge la sauvegarde sinon redirige vers index
+    GameCore.ensureGameOrRedirect("index.html");
+
     if(!ensureReady()) return;
 
-    // Stats & barres dès l’arrivée sur la page
     renderStats();
     renderPlayer();
 
-    // Autospawn + reprise auto si nécessaire
     if(document.getElementById("enemyCard")) spawn(false);
 
     var wasAuto = localStorage.getItem("idleARPG_auto")==="1";
@@ -247,7 +253,7 @@
         GameCore.log("Auto ON (repris)");
       }
     }
-    // garder le timestamp frais
+
     setInterval(function(){
       if(interval) localStorage.setItem("idleARPG_lastTick", String(Date.now()));
     }, 3000);

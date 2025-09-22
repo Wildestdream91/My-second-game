@@ -1,141 +1,153 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
   <title>Idle ARPG — Combat</title>
-  <link rel="stylesheet" href="css/style.css"/>
+  <link rel="stylesheet" href="css/style.css" />
 </head>
 <body class="bg">
 
-<!-- Bandeau debug live -->
-<div id="debugBanner" class="dbg-banner" aria-live="polite">
-  <span id="dbgDiff">Diff: —</span>
-  <span>• Zone: <b id="dbgZone">—</b></span>
-  <span>• XP ×<b id="dbgXP">1.00</b></span>
-  <span>• Or ×<b id="dbgGold">1.00</b></span>
-  <span>• Drop ×<b id="dbgDrop">1.00</b></span>
-  <span>• MF +<b id="dbgMF">0</b>%</span>
-  <span>• Enn. PV ×<b id="dbgEhp">1.00</b></span>
-  <span>• Enn. DMG ×<b id="dbgEdmg">1.00</b></span>
-</div>
+  <!-- Bandeau debug live -->
+  <div id="debugBanner" class="dbg-banner" aria-live="polite" style="font-size:12px;padding:6px 10px;border-bottom:1px solid #24242a;background:#0e0e12;position:sticky;top:0;z-index:5">
+    <span id="dbgDiff">Diff: —</span>
+    <span>• Zone: <b id="dbgZone">—</b></span>
+    <span>• XP ×<b id="dbgXP">1.00</b></span>
+    <span>• Or ×<b id="dbgGold">1.00</b></span>
+    <span>• Drop ×<b id="dbgDrop">1.00</b></span>
+    <span>• MF +<b id="dbgMF">0</b>%</span>
+    <span>• Enn. PV ×<b id="dbgEhp">1.00</b></span>
+    <span>• Enn. DMG ×<b id="dbgEdmg">1.00</b></span>
+  </div>
 
-<header class="topbar">
-  <h1>Idle Ladder Prototype</h1>
-  <nav>
-    <a href="index.html">Sélection</a>
-    <a href="game.html" class="active">Combat</a>
-    <a href="inventory.html">Inventaire</a>
-    <a href="shop.html">Campement</a>
-    <a href="journal.html">Journal</a>
-    <!-- <a href="ladder.html">Classement</a> -->
-    <a href="admin.html">Admin</a>
-    <button class="btn" onclick="GameCore.newGame()">Nouvelle partie</button>
-  </nav>
-</header>
+  <!-- Topbar -->
+  <header class="topbar">
+    <h1>Idle Ladder Prototype</h1>
+    <nav>
+      <a href="index.html">Sélection</a>
+      <a href="game.html" class="active">Combat</a>
+      <a href="inventory.html">Inventaire</a>
+      <a href="shop.html">Campement</a>
+      <a href="journal.html">Journal</a>
+      <a href="ladder.html">Classement</a>
+      <a href="admin.html">Admin</a>
+      <button class="btn" onclick="GameCore.newGame()">Nouvelle partie</button>
+    </nav>
+  </header>
 
-<main class="columns" style="grid-template-columns: 0.9fr 1.1fr;">
-  <section class="panel">
-    <h2>Personnage</h2>
-    <div class="bars">
-      <div class="bar hp">
-        <div class="bar-fill" id="barHpFill"></div>
-        <div class="bar-text" id="barHpText">HP 0/0</div>
+  <!-- Contenu -->
+  <main class="columns" style="grid-template-columns:0.9fr 1.1fr;">
+
+    <!-- Colonne gauche : joueur -->
+    <section class="panel">
+      <h2>Personnage</h2>
+
+      <!-- Barres -->
+      <div class="bars">
+        <div class="bar hp">
+          <div class="bar-fill" id="barHpFill" style="width:0%"></div>
+          <div class="bar-text" id="barHpText">HP 0/0</div>
+        </div>
+        <div class="bar mana">
+          <div class="bar-fill" id="barManaFill" style="width:0%"></div>
+          <div class="bar-text" id="barManaText">Mana 0/0</div>
+        </div>
+        <div class="bar xp">
+          <div class="bar-fill" id="barXpFill" style="width:0%"></div>
+          <div class="bar-text" id="barXpText">XP 0/0</div>
+        </div>
       </div>
-      <div class="bar mana">
-        <div class="bar-fill" id="barManaFill"></div>
-        <div class="bar-text" id="barManaText">Mana 0/0</div>
+
+      <!-- Stats -->
+      <div class="statsBox" style="margin-top:10px">
+        <div>ATQ <b id="cAtk">0</b> • DEF <b id="cDef">0</b> • Crit <b id="cCrit">0</b>% • MF <b id="cMF">0</b>%</div>
       </div>
-      <div class="bar xp">
-        <div class="bar-fill" id="barXpFill"></div>
-        <div class="bar-text" id="barXpText">XP 0/0</div>
+
+      <!-- Carte -->
+      <h3 style="margin-top:12px">Carte</h3>
+      <div class="grid" style="grid-template-columns:1fr 1fr;gap:8px">
+        <div>
+          <label>Acte
+            <select id="selAct"></select>
+          </label>
+        </div>
+        <div>
+          <label>Zone
+            <select id="selZone"></select>
+          </label>
+        </div>
       </div>
-    </div>
-
-    <div class="statsBox" style="margin-top:10px">
-      <div>ATQ <b id="cAtk">0</b> • DEF <b id="cDef">0</b> • Crit <b id="cCrit">0</b>% • MF <b id="cMF">0</b>%</div>
-    </div>
-
-    <h3 style="margin-top:12px">Carte</h3>
-    <div class="grid" style="grid-template-columns:1fr 1fr;gap:8px">
-      <div>
-        <label>Acte
-          <select id="selAct"></select>
-        </label>
+      <div style="display:flex; gap:8px; margin-top:8px">
+        <button class="btn primary" id="btnGo">Aller</button>
+        <button class="btn" id="btnStop">Stop</button>
       </div>
-      <div>
-        <label>Zone
-          <select id="selZone"></select>
-        </label>
+    </section>
+
+    <!-- Colonne droite : combat + journal -->
+    <section class="panel">
+      <h2>Combat</h2>
+      <div id="enemyCard" class="enemyCard">
+        <div class="muted">Aucun ennemi. Choisis une zone puis <b>Aller</b>.</div>
       </div>
-    </div>
-    <div style="display:flex; gap:8px; margin-top:8px">
-      <button class="btn primary" id="btnGo">Aller</button>
-      <button class="btn" id="btnStop">Stop</button>
-    </div>
-  </section>
 
-  <section class="panel">
-    <h2>Combat</h2>
-    <div id="enemyCard" class="enemyCard">
-      <div class="muted">Aucun ennemi. Choisis une zone puis <b>Aller</b>.</div>
-    </div>
+      <h3 style="margin-top:12px">Journal</h3>
+      <div id="log" class="logBox" aria-live="polite"></div>
+    </section>
 
-    <h3 style="margin-top:12px">Journal</h3>
-    <div id="log" class="logBox" aria-live="polite"></div>
-  </section>
-</main>
+  </main>
 
-<script src="js/core.v3.js"></script>
-<script src="js/zones.js"></script>
-<script src="js/combat.js"></script>
-<script>
-(function(){
-  GameCore.ensureGameOrRedirect("index.html");
-  // Remplir actes/zones
-  const selAct  = document.getElementById("selAct");
-  const selZone = document.getElementById("selZone");
-  Zones.fillActs(selAct);
-  selAct.onchange = ()=>Zones.fillZonesForAct(selAct, selZone);
-  Zones.fillZonesForAct(selAct, selZone);
-  document.getElementById("btnGo").onclick = ()=>{
-    const z = selZone.value;
-    GameCore.state.currentZone = z;
-    GameCore.save();
-    Combat.spawn();
-  };
-  document.getElementById("btnStop").onclick = ()=>{
-    if(window.Combat && Combat.toggleAuto) Combat.toggleAuto();
-  };
+  <!-- Scripts (ordre important) -->
+  <script src="js/core.v3.js"></script>
+  <script src="js/zones.js"></script>
+  <script src="js/combat.js"></script>
+  <script>
+    // Initialisation page (petit bandeau debug + hooks UI)
+    (function () {
+      // sécurise la présence d’une partie
+      GameCore.ensureGameOrRedirect("index.html");
 
-  // Debug banner live
-  (function(){
-    function fmt(n){ return Number(n||1).toFixed(2); }
-    function refresh(){
-      const diff = GameCore.getDifficulty();
-      const zoneId = GameCore.state?.currentZone || "—";
-      const z = Zones.getZone(zoneId);
-      const scal = Zones.getDifficultyScalars(diff);
-      const cfg = GameCore.getConfig?.() || {};
-      const xpF   = (scal.reward?.xp   ?? 1) * ((cfg.xpRate   ?? 100)/100);
-      const goldF = (scal.reward?.gold ?? 1) * ((cfg.goldRate ?? 100)/100);
-      const dropF = (scal.reward?.drop ?? 1) * ((cfg.dropRate ?? 100)/100);
-      const mfAdd = (scal.reward?.mfBonus ?? 0) + (cfg.mfRate ?? 0);
-      document.getElementById('dbgDiff').textContent = 'Diff: '+diff;
-      document.getElementById('dbgZone').textContent = z ? z.nameFR : zoneId;
-      document.getElementById('dbgXP').textContent   = fmt(xpF);
-      document.getElementById('dbgGold').textContent = fmt(goldF);
-      document.getElementById('dbgDrop').textContent = fmt(dropF);
-      document.getElementById('dbgMF').textContent   = String(mfAdd);
-      document.getElementById('dbgEhp').textContent  = fmt(scal.enemy?.hp ?? 1);
-      document.getElementById('dbgEdmg').textContent = fmt(scal.enemy?.dmg ?? 1);
-    }
-    refresh(); setInterval(refresh,1000);
-  })();
+      // Remplir actes/zones
+      const selAct  = document.getElementById("selAct");
+      const selZone = document.getElementById("selZone");
+      Zones.fillActs(selAct);
+      selAct.onchange = () => Zones.fillZonesForAct(selAct, selZone);
+      Zones.fillZonesForAct(selAct, selZone);
 
-  // Premier spawn sûr après init UI
-  setTimeout(()=>{ Combat.spawn(false); }, 50);
-})();
-</script>
+      // Boutons
+      document.getElementById("btnGo").onclick = () => {
+        const z = selZone.value;
+        GameCore.state.currentZone = z;
+        GameCore.save();
+        if (window.Combat && Combat.spawn) Combat.spawn();
+      };
+      document.getElementById("btnStop").onclick = () => {
+        if (window.Combat && Combat.toggleAuto) Combat.toggleAuto();
+      };
+
+      // Bandeau debug live (facultatif)
+      function fmt(n){ return Number(n||1).toFixed(2); }
+      function refreshDbg(){
+        const diff = GameCore.getDifficulty();
+        const zoneId = GameCore.state?.currentZone || "—";
+        const z = Zones.getZone(zoneId);
+        const scal = Zones.getDifficultyScalars(diff);
+        const cfg = GameCore.getConfig?.() || {};
+        const xpF   = (scal.reward?.xp   ?? 1) * ((cfg.xpRate   ?? 100)/100);
+        const goldF = (scal.reward?.gold ?? 1) * ((cfg.goldRate ?? 100)/100);
+        const dropF = (scal.reward?.drop ?? 1) * ((cfg.dropRate ?? 100)/100);
+        const mfAdd = (scal.mfBonus ?? 0) + (cfg.mfRate ?? 0);
+        document.getElementById('dbgDiff').textContent = 'Diff: ' + diff;
+        document.getElementById('dbgZone').textContent = z ? z.nameFR : zoneId;
+        document.getElementById('dbgXP').textContent   = fmt(xpF);
+        document.getElementById('dbgGold').textContent = fmt(goldF);
+        document.getElementById('dbgDrop').textContent = fmt(dropF);
+        document.getElementById('dbgMF').textContent   = String(mfAdd);
+        document.getElementById('dbgEhp').textContent  = fmt(scal.enemy?.hp ?? 1);
+        document.getElementById('dbgEdmg').textContent = fmt(scal.enemy?.dmg ?? 1);
+      }
+      refreshDbg();
+      setInterval(refreshDbg, 1000);
+    })();
+  </script>
 </body>
 </html>
